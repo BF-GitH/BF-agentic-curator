@@ -58,14 +58,11 @@ function isOwnCall() {
 
 /**
  * Resolve the API key for a writer or judge config.
- * Falls back to sharedApiKey, then to ST's own API key.
+ * Falls back to sharedApiKey. Returns empty string if none found
+ * (callLLM will use ST proxy in that case).
  */
 function resolveApiKey(writerOrJudgeConfig, settings) {
-    const key = resolveApiKeyFromSettings(writerOrJudgeConfig);
-    if (!key) {
-        throw new Error(`${LOG} No API key configured (set per-writer key, shared key, or configure it in SillyTavern's API settings)`);
-    }
-    return key;
+    return resolveApiKeyFromSettings(writerOrJudgeConfig);
 }
 
 /**

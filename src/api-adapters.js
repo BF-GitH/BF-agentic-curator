@@ -158,7 +158,70 @@ async function callAnthropic(messages, config, signal) {
 }
 
 /**
- * Call an LLM provider directly via fetch().
+ * Map extension provider names to ST's chat_completion_source values.
+ */
+const ST_SOURCE_MAP = {
+    'openrouter': 'openrouter',
+    'anthropic': 'claude',
+    'custom': 'custom',
+};
+
+/**
+ * Call an LLM via SillyTavern's backend proxy.
+ * ST attaches the API key server-side — no key needed in the browser.
+ * @param {Array} messages
+ * @param {object} config
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<string>}
+ */
+async function callSTProxy(messages, config, signal) {
+    const { model, temperature, maxTokens, provider } = config;
+    const chatCompletionSource = ST_SOURCE_MAP[provider] || provider;
+
+    const headers = SillyTavern.getContext().getRequestHeaders?.();
+    if (!headers) {
+        throw new Error(`${LOG_PREFIX} Cannot get ST request headers for proxy call`);
+    }
+
+    const body = {
+        chat_completion_source: chatCompletionSource,
+        model,
+        messages,
+        max_tokens: maxTokens,
+        temperature,
+        stream: false,
+    };
+
+    console.log(`${LOG_PREFIX} Calling ST proxy for ${chatCompletionSource}/${model}`);
+
+    const response = await fetch('/api/backends/chat-completions/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal,
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text().catch(() => '(unable to read error body)');
+        throw new Error(
+            `${LOG_PREFIX} ST proxy ${response.status} ${response.statusText}: ${errorBody}`
+        );
+    }
+
+    const data = await response.json();
+
+    // ST proxy returns OpenAI-compatible format
+    const content = data?.choices?.[0]?.message?.content;
+    if (content == null) {
+        throw new Error(`${LOG_PREFIX} Unexpected response from ST proxy: ${JSON.stringify(data).slice(0, 200)}`);
+    }
+
+    return content;
+}
+
+/**
+ * Call an LLM provider. Uses direct API calls when an API key is available,
+ * otherwise proxies through SillyTavern's backend (which uses ST's stored key).
  * @param {Array} messages - Chat messages array [{role, content}, ...]
  * @param {object} config - { provider, model, apiKey, temperature, maxTokens, baseUrl }
  * @param {AbortSignal} [signal] - Optional AbortController signal for cancellation
@@ -168,32 +231,39 @@ export async function callLLM(messages, config, signal) {
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
         throw new Error(`${LOG_PREFIX} callLLM requires a non-empty messages array`);
     }
-    if (!config || !config.provider || !config.model || !config.apiKey) {
-        throw new Error(`${LOG_PREFIX} callLLM requires config with provider, model, and apiKey`);
+    if (!config || !config.provider || !config.model) {
+        throw new Error(`${LOG_PREFIX} callLLM requires config with provider and model`);
     }
 
     const startTime = performance.now();
 
     let content;
+    const hasApiKey = !!config.apiKey;
 
-    switch (config.provider) {
-        case 'openrouter':
-            content = await callOpenAICompatible(messages, config, signal);
-            break;
+    if (!hasApiKey) {
+        // No API key available — proxy through ST's backend
+        console.log(`${LOG_PREFIX} No API key for ${config.provider}, using ST proxy`);
+        content = await callSTProxy(messages, config, signal);
+    } else {
+        switch (config.provider) {
+            case 'openrouter':
+                content = await callOpenAICompatible(messages, config, signal);
+                break;
 
-        case 'anthropic':
-            content = await callAnthropic(messages, config, signal);
-            break;
+            case 'anthropic':
+                content = await callAnthropic(messages, config, signal);
+                break;
 
-        case 'custom':
-            if (!config.baseUrl) {
-                throw new Error(`${LOG_PREFIX} Custom provider requires a baseUrl in config`);
-            }
-            content = await callOpenAICompatible(messages, config, signal);
-            break;
+            case 'custom':
+                if (!config.baseUrl) {
+                    throw new Error(`${LOG_PREFIX} Custom provider requires a baseUrl in config`);
+                }
+                content = await callOpenAICompatible(messages, config, signal);
+                break;
 
-        default:
-            throw new Error(`${LOG_PREFIX} Unknown provider: ${config.provider}`);
+            default:
+                throw new Error(`${LOG_PREFIX} Unknown provider: ${config.provider}`);
+        }
     }
 
     const elapsed = performance.now() - startTime;
