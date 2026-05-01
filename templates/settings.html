@@ -1,7 +1,7 @@
 <div id="bf_curator_settings" class="bf-curator-extension-block">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>BF Curator - Anti-Consensus Filter <small style="opacity: 0.5;">v1.5.1</small></b>
+      <b>BF Curator - Anti-Consensus Filter <small style="opacity: 0.5;">v1.6.0</small></b>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
@@ -59,7 +59,7 @@
           <!-- Shared API Settings -->
           <div class="bf-curator-section">
             <h4>Shared API Settings</h4>
-            <p class="bf-curator-helper">Default provider and key used when a writer or judge doesn't have its own.</p>
+            <p class="bf-curator-helper">Default provider and key used when a writer or judge doesn't have its own. Leave blank to automatically use SillyTavern's configured API key.</p>
 
             <div class="bf-curator-inline-field">
               <label for="bf_curator_sharedProvider"><small>Default Provider:</small></label>
@@ -72,7 +72,7 @@
 
             <div class="bf-curator-field">
               <label for="bf_curator_sharedApiKey"><small>Shared API Key</small></label>
-              <input id="bf_curator_sharedApiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Used when writer/judge key is blank" />
+              <input id="bf_curator_sharedApiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Leave blank to use ST's API key" />
             </div>
           </div>
 
@@ -172,7 +172,7 @@
 
             <div class="bf-curator-field">
               <label for="bf_curator_writer2_apiKey"><small>API Key <span class="bf-curator-helper-inline">(blank = shared)</span></small></label>
-              <input id="bf_curator_writer2_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Use shared key" />
+              <input id="bf_curator_writer2_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Leave blank to use shared/ST key" />
             </div>
 
             <button id="bf_curator_writer2_test" class="menu_button bf-curator-full-width" style="margin-bottom: 8px;">
@@ -273,7 +273,7 @@
 
             <div class="bf-curator-field">
               <label for="bf_curator_writer3_apiKey"><small>API Key <span class="bf-curator-helper-inline">(blank = shared)</span></small></label>
-              <input id="bf_curator_writer3_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Use shared key" />
+              <input id="bf_curator_writer3_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Leave blank to use shared/ST key" />
             </div>
 
             <button id="bf_curator_writer3_test" class="menu_button bf-curator-full-width" style="margin-bottom: 8px;">
@@ -374,7 +374,7 @@
 
             <div class="bf-curator-field">
               <label for="bf_curator_judge_apiKey"><small>API Key <span class="bf-curator-helper-inline">(blank = shared)</span></small></label>
-              <input id="bf_curator_judge_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Use shared key" />
+              <input id="bf_curator_judge_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Leave blank to use shared/ST key" />
             </div>
 
             <button id="bf_curator_judge_test" class="menu_button bf-curator-full-width" style="margin-bottom: 8px;">

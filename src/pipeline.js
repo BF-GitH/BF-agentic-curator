@@ -10,7 +10,7 @@
  * 6. Reveals the message
  */
 
-import { getSettings, setStatusIndicator } from './settings.js';
+import { getSettings, setStatusIndicator, resolveApiKey as resolveApiKeyFromSettings } from './settings.js';
 import { setArmedCheck, getCapturedPrompt, clearCapturedPrompt } from './interceptor.js';
 import { callLLM } from './api-adapters.js';
 import { buildJudgeMessages, getDefaultJudgePrompt } from './judge.js';
@@ -58,12 +58,12 @@ function isOwnCall() {
 
 /**
  * Resolve the API key for a writer or judge config.
- * Falls back to sharedApiKey. Throws if neither is set.
+ * Falls back to sharedApiKey, then to ST's own API key.
  */
 function resolveApiKey(writerOrJudgeConfig, settings) {
-    const key = writerOrJudgeConfig.apiKey || settings.sharedApiKey;
+    const key = resolveApiKeyFromSettings(writerOrJudgeConfig);
     if (!key) {
-        throw new Error(`${LOG} No API key configured (set per-writer key or shared key)`);
+        throw new Error(`${LOG} No API key configured (set per-writer key, shared key, or configure it in SillyTavern's API settings)`);
     }
     return key;
 }

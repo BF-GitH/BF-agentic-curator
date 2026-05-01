@@ -65,8 +65,64 @@ const DEFAULT_SETTINGS = {
 
 let extensionSettings = null;
 
+// Cached ST API keys (fetched once at startup)
+const stApiKeys = {
+    api_key_openrouter: '',
+    api_key_claude: '',
+};
+
 function getContext() {
     return SillyTavern.getContext();
+}
+
+// ─── ST API key fallback ───
+
+/**
+ * Fetch a secret from SillyTavern's secret store.
+ * Uses ST's /api/secrets/view endpoint.
+ */
+async function fetchSTSecret(secretKey) {
+    try {
+        const headers = getContext().getRequestHeaders?.();
+        const response = await fetch('/api/secrets/view', {
+            method: 'POST',
+            headers: headers || { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: secretKey }),
+        });
+        if (!response.ok) return '';
+        const text = await response.text();
+        // ST returns the raw secret value as text
+        return text?.trim() || '';
+    } catch (err) {
+        console.warn(`${LOG_PREFIX} Could not read ST secret '${secretKey}':`, err.message);
+        return '';
+    }
+}
+
+/**
+ * Fetch and cache ST's API keys for OpenRouter and Anthropic.
+ * Called once during init so resolveApiKey can fall back synchronously.
+ */
+async function cacheSTApiKeys() {
+    const keys = ['api_key_openrouter', 'api_key_claude'];
+    const results = await Promise.allSettled(keys.map(k => fetchSTSecret(k)));
+    results.forEach((result, i) => {
+        if (result.status === 'fulfilled' && result.value) {
+            stApiKeys[keys[i]] = result.value;
+            console.log(`${LOG_PREFIX} Cached ST secret: ${keys[i]} (${result.value.length} chars)`);
+        }
+    });
+}
+
+/**
+ * Map a provider name to the ST secret key name.
+ */
+function getSTSecretKeyForProvider(provider) {
+    switch (provider) {
+        case 'openrouter': return 'api_key_openrouter';
+        case 'anthropic': return 'api_key_claude';
+        default: return null;
+    }
 }
 
 // ─── Settings persistence ───
@@ -459,10 +515,21 @@ async function loadUI() {
 // ─── Public API ───
 
 export function resolveApiKey(writerOrJudgeConfig) {
+    // 1. Per-writer/judge key
     if (writerOrJudgeConfig && writerOrJudgeConfig.apiKey) {
         return writerOrJudgeConfig.apiKey;
     }
-    return extensionSettings?.sharedApiKey || '';
+    // 2. Shared key from extension settings
+    if (extensionSettings?.sharedApiKey) {
+        return extensionSettings.sharedApiKey;
+    }
+    // 3. Fall back to ST's own API key for this provider
+    const provider = writerOrJudgeConfig?.provider || extensionSettings?.sharedProvider || 'openrouter';
+    const stKey = getSTSecretKeyForProvider(provider);
+    if (stKey && stApiKeys[stKey]) {
+        return stApiKeys[stKey];
+    }
+    return '';
 }
 
 export function getSettings() {
@@ -475,5 +542,6 @@ export function setStatusIndicator(state) {
 
 export async function initSettings() {
     loadSettings();
+    await cacheSTApiKeys();
     await loadUI();
 }
