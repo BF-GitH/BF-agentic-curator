@@ -1,0 +1,434 @@
+<div id="bf_curator_settings" class="bf-curator-extension-block">
+  <div class="inline-drawer">
+    <div class="inline-drawer-toggle inline-drawer-header">
+      <b>BF Curator - Anti-Consensus Filter <small style="opacity: 0.5;">v1.5.0</small></b>
+      <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+    </div>
+    <div class="inline-drawer-content">
+
+      <p class="bf-curator-helper">
+        Runs multiple AI writers in parallel, identifies consensus patterns (slop),
+        and synthesizes a response from unique elements (signal) only.
+      </p>
+
+      <!-- Status Bar -->
+      <div class="bf-curator-status">
+        <div id="bf_curator_status_dot" class="bf-curator-status-dot"></div>
+        <span id="bf_curator_status_text" class="bf-curator-status-text">Disabled</span>
+      </div>
+
+      <!-- Main Toggle -->
+      <div class="bf-curator-main-toggle">
+        <label for="bf_curator_enabled" class="checkbox_label">
+          <input id="bf_curator_enabled" type="checkbox" />
+          <span>Enable BF Curator</span>
+        </label>
+      </div>
+
+      <!-- Settings Content (hidden when disabled) -->
+      <div id="bf_curator_settings_content" style="display: none;">
+
+        <!-- Tab Navigation -->
+        <div class="bf-curator-tabs" role="tablist" aria-label="Arena settings sections">
+          <button class="bf-curator-tab-btn active" data-tab="general" role="tab" tabindex="0"
+                  aria-selected="true" aria-controls="bf_curator_tab_general"
+                  id="bf_curator_tabbutton_general">
+            <i class="fa-solid fa-gear"></i> General
+          </button>
+          <button class="bf-curator-tab-btn" data-tab="writers" role="tab" tabindex="-1"
+                  aria-selected="false" aria-controls="bf_curator_tab_writers"
+                  id="bf_curator_tabbutton_writers">
+            <i class="fa-solid fa-pen-nib"></i> Writers
+          </button>
+          <button class="bf-curator-tab-btn" data-tab="judge" role="tab" tabindex="-1"
+                  aria-selected="false" aria-controls="bf_curator_tab_judge"
+                  id="bf_curator_tabbutton_judge">
+            <i class="fa-solid fa-gavel"></i> Judge
+          </button>
+          <button class="bf-curator-tab-btn" data-tab="tools" role="tab" tabindex="-1"
+                  aria-selected="false" aria-controls="bf_curator_tab_tools"
+                  id="bf_curator_tabbutton_tools">
+            <i class="fa-solid fa-toolbox"></i> Tools
+          </button>
+        </div>
+
+        <!-- ==================== GENERAL TAB ==================== -->
+        <div id="bf_curator_tab_general" class="bf-curator-tab-panel" role="tabpanel"
+             aria-labelledby="bf_curator_tabbutton_general">
+
+          <!-- Shared API Settings -->
+          <div class="bf-curator-section">
+            <h4>Shared API Settings</h4>
+            <p class="bf-curator-helper">Default provider and key used when a writer or judge doesn't have its own.</p>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_sharedProvider"><small>Default Provider:</small></label>
+              <select id="bf_curator_sharedProvider" class="text_pole" style="flex: 1;">
+                <option value="openrouter">OpenRouter</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="custom">OpenAI-Compatible</option>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_sharedApiKey"><small>Shared API Key</small></label>
+              <input id="bf_curator_sharedApiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Used when writer/judge key is blank" />
+            </div>
+          </div>
+
+          <hr class="bf-curator-divider" />
+
+          <!-- Behavior -->
+          <div class="bf-curator-section">
+            <h4>Behavior</h4>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_minWriters"><small>Min writers required:</small></label>
+              <input type="number" id="bf_curator_minWriters" class="text_pole bf-curator-narrow-input" min="2" max="3" value="2" />
+            </div>
+            <p class="bf-curator-helper">Minimum successful writer responses needed before running the judge. If fewer succeed, the best single response is used.</p>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_timeoutMs"><small>Timeout (ms):</small></label>
+              <input type="number" id="bf_curator_timeoutMs" class="text_pole bf-curator-narrow-input" min="10000" max="600000" step="1000" value="120000" />
+            </div>
+            <p class="bf-curator-helper">Max time to wait for each writer before giving up.</p>
+
+            <label for="bf_curator_showToast" class="checkbox_label">
+              <input id="bf_curator_showToast" type="checkbox" />
+              <span>Toast notifications</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ==================== WRITERS TAB ==================== -->
+        <div id="bf_curator_tab_writers" class="bf-curator-tab-panel" role="tabpanel"
+             aria-labelledby="bf_curator_tabbutton_writers"
+             style="display: none;" aria-hidden="true">
+
+          <p class="bf-curator-helper">Writer 1 uses SillyTavern's native connection. Configure Writers 2 and 3 below for parallel generation via direct API calls.</p>
+
+          <!-- Writer 2 -->
+          <div class="bf-curator-section bf-curator-writer-card writer-2">
+            <h4>
+              <span class="bf-curator-writer-badge badge-w2">W2</span> Writer 2
+              <label for="bf_curator_writer2_enabled" class="checkbox_label" style="min-width: auto; flex: 0 0 auto; margin-left: auto; margin-bottom: 0;">
+                <input id="bf_curator_writer2_enabled" type="checkbox" />
+              </label>
+            </h4>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_writer2_provider"><small>Provider:</small></label>
+              <select id="bf_curator_writer2_provider" class="text_pole" style="flex: 1;">
+                <option value="openrouter">OpenRouter</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="custom">OpenAI-Compatible</option>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_writer2_model"><small>Model</small></label>
+              <select id="bf_curator_writer2_model" class="text_pole bf-curator-full-width">
+                <option value="">-- Select Model --</option>
+                <optgroup label="Anthropic">
+                  <option value="anthropic/claude-opus-4">Claude Opus 4</option>
+                  <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+                  <option value="anthropic/claude-haiku-4">Claude Haiku 4</option>
+                  <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                  <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
+                </optgroup>
+                <optgroup label="OpenAI">
+                  <option value="openai/gpt-4o">GPT-4o</option>
+                  <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="openai/gpt-4.1">GPT-4.1</option>
+                  <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+                  <option value="openai/o3">o3</option>
+                  <option value="openai/o4-mini">o4-mini</option>
+                </optgroup>
+                <optgroup label="Google">
+                  <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
+                  <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash</option>
+                  <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+                </optgroup>
+                <optgroup label="Meta">
+                  <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
+                  <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
+                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
+                  <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                  <option value="mistralai/mistral-large-2411">Mistral Large</option>
+                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_writer2_apiKey"><small>API Key <span class="bf-curator-helper-inline">(blank = shared)</span></small></label>
+              <input id="bf_curator_writer2_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Use shared key" />
+            </div>
+
+            <button id="bf_curator_writer2_test" class="menu_button bf-curator-full-width" style="margin-bottom: 8px;">
+              <i class="fa-solid fa-plug"></i> Test Connection
+            </button>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_writer2_temperature"><small>Temp:</small></label>
+              <input id="bf_curator_writer2_temperature" type="number" class="text_pole bf-curator-narrow-input" min="0" max="2" step="0.05" value="1.0" />
+              <label for="bf_curator_writer2_maxTokens"><small>Max Tokens:</small></label>
+              <input id="bf_curator_writer2_maxTokens" type="number" class="text_pole bf-curator-narrow-input" min="1" max="100000" step="1" value="4096" />
+            </div>
+
+            <hr class="bf-curator-divider" />
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_writer2_systemPromptMode"><small>System Prompt:</small></label>
+              <select id="bf_curator_writer2_systemPromptMode" class="text_pole" style="flex: 1;">
+                <option value="append">Append to existing</option>
+                <option value="replace">Replace entirely</option>
+              </select>
+            </div>
+
+            <div id="bf_curator_writer2_suffixWrap">
+              <label for="bf_curator_writer2_systemPromptSuffix"><small>Suffix <span class="bf-curator-helper-inline">(appended to system prompt)</span></small></label>
+              <textarea id="bf_curator_writer2_systemPromptSuffix" class="bf-curator-textarea" rows="3" placeholder="Additional instructions appended..."></textarea>
+            </div>
+
+            <div id="bf_curator_writer2_replaceWrap" style="display: none;">
+              <label for="bf_curator_writer2_systemPrompt"><small>Full Replacement Prompt</small></label>
+              <textarea id="bf_curator_writer2_systemPrompt" class="bf-curator-textarea" rows="4" placeholder="Replaces system prompt entirely..."></textarea>
+            </div>
+          </div>
+
+          <hr class="bf-curator-divider" />
+
+          <!-- Writer 3 -->
+          <div class="bf-curator-section bf-curator-writer-card writer-3">
+            <h4>
+              <span class="bf-curator-writer-badge badge-w3">W3</span> Writer 3
+              <label for="bf_curator_writer3_enabled" class="checkbox_label" style="min-width: auto; flex: 0 0 auto; margin-left: auto; margin-bottom: 0;">
+                <input id="bf_curator_writer3_enabled" type="checkbox" />
+              </label>
+            </h4>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_writer3_provider"><small>Provider:</small></label>
+              <select id="bf_curator_writer3_provider" class="text_pole" style="flex: 1;">
+                <option value="openrouter">OpenRouter</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="custom">OpenAI-Compatible</option>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_writer3_model"><small>Model</small></label>
+              <select id="bf_curator_writer3_model" class="text_pole bf-curator-full-width">
+                <option value="">-- Select Model --</option>
+                <optgroup label="Anthropic">
+                  <option value="anthropic/claude-opus-4">Claude Opus 4</option>
+                  <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+                  <option value="anthropic/claude-haiku-4">Claude Haiku 4</option>
+                  <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                  <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
+                </optgroup>
+                <optgroup label="OpenAI">
+                  <option value="openai/gpt-4o">GPT-4o</option>
+                  <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="openai/gpt-4.1">GPT-4.1</option>
+                  <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+                  <option value="openai/o3">o3</option>
+                  <option value="openai/o4-mini">o4-mini</option>
+                </optgroup>
+                <optgroup label="Google">
+                  <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
+                  <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash</option>
+                  <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+                </optgroup>
+                <optgroup label="Meta">
+                  <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
+                  <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
+                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
+                  <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                  <option value="mistralai/mistral-large-2411">Mistral Large</option>
+                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_writer3_apiKey"><small>API Key <span class="bf-curator-helper-inline">(blank = shared)</span></small></label>
+              <input id="bf_curator_writer3_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Use shared key" />
+            </div>
+
+            <button id="bf_curator_writer3_test" class="menu_button bf-curator-full-width" style="margin-bottom: 8px;">
+              <i class="fa-solid fa-plug"></i> Test Connection
+            </button>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_writer3_temperature"><small>Temp:</small></label>
+              <input id="bf_curator_writer3_temperature" type="number" class="text_pole bf-curator-narrow-input" min="0" max="2" step="0.05" value="1.2" />
+              <label for="bf_curator_writer3_maxTokens"><small>Max Tokens:</small></label>
+              <input id="bf_curator_writer3_maxTokens" type="number" class="text_pole bf-curator-narrow-input" min="1" max="100000" step="1" value="4096" />
+            </div>
+
+            <hr class="bf-curator-divider" />
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_writer3_systemPromptMode"><small>System Prompt:</small></label>
+              <select id="bf_curator_writer3_systemPromptMode" class="text_pole" style="flex: 1;">
+                <option value="append">Append to existing</option>
+                <option value="replace">Replace entirely</option>
+              </select>
+            </div>
+
+            <div id="bf_curator_writer3_suffixWrap">
+              <label for="bf_curator_writer3_systemPromptSuffix"><small>Suffix <span class="bf-curator-helper-inline">(appended to system prompt)</span></small></label>
+              <textarea id="bf_curator_writer3_systemPromptSuffix" class="bf-curator-textarea" rows="3" placeholder="Additional instructions appended..."></textarea>
+            </div>
+
+            <div id="bf_curator_writer3_replaceWrap" style="display: none;">
+              <label for="bf_curator_writer3_systemPrompt"><small>Full Replacement Prompt</small></label>
+              <textarea id="bf_curator_writer3_systemPrompt" class="bf-curator-textarea" rows="4" placeholder="Replaces system prompt entirely..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== JUDGE TAB ==================== -->
+        <div id="bf_curator_tab_judge" class="bf-curator-tab-panel" role="tabpanel"
+             aria-labelledby="bf_curator_tabbutton_judge"
+             style="display: none;" aria-hidden="true">
+
+          <!-- Judge API Settings -->
+          <div class="bf-curator-section">
+            <h4>Judge API</h4>
+            <p class="bf-curator-helper">The judge receives all writer outputs and synthesizes a single response with consensus patterns removed.</p>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_judge_provider"><small>Provider:</small></label>
+              <select id="bf_curator_judge_provider" class="text_pole" style="flex: 1;">
+                <option value="openrouter">OpenRouter</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="custom">OpenAI-Compatible</option>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_judge_model"><small>Model</small></label>
+              <select id="bf_curator_judge_model" class="text_pole bf-curator-full-width">
+                <option value="">-- Select Model --</option>
+                <optgroup label="Anthropic">
+                  <option value="anthropic/claude-opus-4">Claude Opus 4</option>
+                  <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
+                  <option value="anthropic/claude-haiku-4">Claude Haiku 4</option>
+                  <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                  <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
+                </optgroup>
+                <optgroup label="OpenAI">
+                  <option value="openai/gpt-4o">GPT-4o</option>
+                  <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="openai/gpt-4.1">GPT-4.1</option>
+                  <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+                  <option value="openai/o3">o3</option>
+                  <option value="openai/o4-mini">o4-mini</option>
+                </optgroup>
+                <optgroup label="Google">
+                  <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
+                  <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash</option>
+                  <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+                </optgroup>
+                <optgroup label="Meta">
+                  <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
+                  <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
+                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
+                  <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                  <option value="mistralai/mistral-large-2411">Mistral Large</option>
+                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="bf-curator-field">
+              <label for="bf_curator_judge_apiKey"><small>API Key <span class="bf-curator-helper-inline">(blank = shared)</span></small></label>
+              <input id="bf_curator_judge_apiKey" type="password" class="text_pole bf-curator-full-width" placeholder="Use shared key" />
+            </div>
+
+            <button id="bf_curator_judge_test" class="menu_button bf-curator-full-width" style="margin-bottom: 8px;">
+              <i class="fa-solid fa-plug"></i> Test Connection
+            </button>
+
+            <div class="bf-curator-inline-field">
+              <label for="bf_curator_judge_temperature"><small>Temp:</small></label>
+              <input id="bf_curator_judge_temperature" type="number" class="text_pole bf-curator-narrow-input" min="0" max="2" step="0.05" value="0.3" />
+              <label for="bf_curator_judge_maxTokens"><small>Max Tokens:</small></label>
+              <input id="bf_curator_judge_maxTokens" type="number" class="text_pole bf-curator-narrow-input" min="1" max="100000" step="1" value="8192" />
+            </div>
+          </div>
+
+          <hr class="bf-curator-divider" />
+
+          <!-- Judge Prompt -->
+          <div class="bf-curator-section">
+            <h4>Judge Prompt
+              <button id="bf_curator_judge_resetPrompt" class="menu_button" title="Reset to default" style="font-size: 0.8em; padding: 2px 6px; margin-left: auto;">
+                <i class="fa-solid fa-undo"></i> Reset
+              </button>
+            </h4>
+            <p class="bf-curator-helper">The anti-consensus filter instructions sent to the judge. Edit freely. Supports <code>{response_a}</code>, <code>{response_b}</code>, <code>{response_c}</code> placeholders.</p>
+            <textarea id="bf_curator_judge_prompt" class="bf-curator-textarea bf-curator-judge-prompt"></textarea>
+          </div>
+        </div>
+
+        <!-- ==================== TOOLS TAB ==================== -->
+        <div id="bf_curator_tab_tools" class="bf-curator-tab-panel" role="tabpanel"
+             aria-labelledby="bf_curator_tabbutton_tools"
+             style="display: none;" aria-hidden="true">
+
+          <!-- Debug -->
+          <div class="bf-curator-section">
+            <h4>Debug
+              <label for="bf_curator_debugMode" class="checkbox_label" style="min-width: auto; flex: 0 0 auto; margin-left: auto;">
+                <input id="bf_curator_debugMode" type="checkbox" />
+                <span>Show log</span>
+              </label>
+            </h4>
+            <div id="bf_curator_debug_panel" style="display: none;">
+              <div class="bf-curator-preset-toolbar">
+                <div class="bf-curator-preset-toolbar-safe">
+                  <button id="bf_curator_copy_debug" class="menu_button" title="Copy logs to clipboard">
+                    <i class="fa-solid fa-copy"></i> <span class="bf-curator-btn-label">Copy Logs</span>
+                  </button>
+                </div>
+                <div class="bf-curator-preset-toolbar-danger">
+                  <button id="bf_curator_clear_debug" class="menu_button bf-curator-danger" title="Clear log">
+                    <i class="fa-solid fa-trash"></i> <span class="bf-curator-btn-label">Clear</span>
+                  </button>
+                </div>
+              </div>
+              <div id="bf_curator_debug_log" class="bf-curator-debug">
+                <div class="bf-curator-debug-entry info">Waiting for activity...</div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="bf-curator-divider" />
+
+          <!-- Reset All -->
+          <div class="bf-curator-section">
+            <button id="bf_curator_reset_all" class="menu_button bf-curator-danger bf-curator-full-width">
+              <i class="fa-solid fa-undo"></i> Reset All Settings to Defaults
+            </button>
+            <p class="bf-curator-helper">Clears ALL saved settings back to factory defaults.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

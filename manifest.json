@@ -1,0 +1,12 @@
+{
+  "display_name": "BF Agentic Curator",
+  "loading_order": 100,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "BF-GitH",
+  "version": "1.5.0",
+  "homePage": "https://github.com/BF-GitH/bf-agentic-curator",
+  "auto_update": false
+}
