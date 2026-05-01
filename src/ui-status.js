@@ -154,17 +154,32 @@ export function setSkipCallback(fn) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Truncate text to roughly N words, preserving word boundaries.
+ * @param {string} text
+ * @param {number} wordLimit
+ * @returns {string}
+ */
+function truncateWords(text, wordLimit) {
+    if (!text) return '';
+    const words = text.split(/\s+/);
+    if (words.length <= wordLimit) return text;
+    return words.slice(0, wordLimit).join(' ') + ` [...${words.length - wordLimit} more words]`;
+}
+
+/**
  * Add an entry to the debug log.
  * @param {'info'|'pass'|'fail'} type
  * @param {string} message
+ * @param {string} [detail] - Optional expandable detail (full text content)
  */
-export function addDebugLog(type, message) {
+export function addDebugLog(type, message, detail) {
     if (debugLog.length >= MAX_DEBUG_ENTRIES) {
         debugLog.shift();
     }
     const timestamp = new Date();
-    debugLog.push({ type, message, timestamp });
+    debugLog.push({ type, message, detail, timestamp });
     console.log(`${LOG_PREFIX} [${type.toUpperCase()}] ${message}`);
+    if (detail) console.log(`${LOG_PREFIX} [DETAIL] ${detail.slice(0, 500)}${detail.length > 500 ? '...' : ''}`);
 
     // Render to settings debug panel if it exists
     const panel = document.getElementById('bf_curator_debug_log');
@@ -179,6 +194,24 @@ export function addDebugLog(type, message) {
         entry.className = `bf-curator-debug-entry ${type}`;
         const time = timestamp.toLocaleTimeString();
         entry.textContent = `[${time}] ${message}`;
+
+        // Add collapsible detail block if provided
+        if (detail) {
+            const toggle = document.createElement('span');
+            toggle.textContent = ' [+show]';
+            toggle.style.cssText = 'cursor:pointer; opacity:0.7; font-size:0.9em;';
+            const detailBlock = document.createElement('pre');
+            detailBlock.textContent = detail;
+            detailBlock.style.cssText = 'display:none; white-space:pre-wrap; word-break:break-word; margin:4px 0 8px 16px; padding:6px; background:rgba(0,0,0,0.3); border-radius:4px; font-size:0.85em; max-height:400px; overflow-y:auto; color:inherit;';
+            toggle.addEventListener('click', () => {
+                const visible = detailBlock.style.display !== 'none';
+                detailBlock.style.display = visible ? 'none' : 'block';
+                toggle.textContent = visible ? ' [+show]' : ' [-hide]';
+            });
+            entry.appendChild(toggle);
+            entry.appendChild(detailBlock);
+        }
+
         panel.appendChild(entry);
 
         // Trim DOM entries to match max
@@ -190,6 +223,11 @@ export function addDebugLog(type, message) {
         panel.scrollTop = panel.scrollHeight;
     }
 }
+
+/**
+ * Helper: truncate to first N words for summary logging.
+ */
+export { truncateWords };
 
 /**
  * Return a copy of all debug log entries.

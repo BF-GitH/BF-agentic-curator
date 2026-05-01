@@ -17,7 +17,7 @@ import { buildJudgeMessages, getDefaultJudgePrompt } from './judge.js';
 import {
     showIndicator, hideIndicator, updateIndicator,
     showSkipButton, hideSkipButton, setSkipCallback,
-    addDebugLog,
+    addDebugLog, truncateWords,
 } from './ui-status.js';
 
 const LOG = '[BFCurator]';
@@ -188,6 +188,35 @@ function replaceMessage(messageIndex, newContent) {
 
 // ── Fire parallel writers ───────────────────────────────────────────────────
 
+/**
+ * Log a summary of the captured prompt (first 100 words of system + last user message).
+ */
+function logPromptSummary(messages, label) {
+    if (!messages || messages.length === 0) return;
+
+    const systemMsg = messages.find(m => m.role === 'system');
+    const userMsgs = messages.filter(m => m.role === 'user');
+    const lastUserMsg = userMsgs[userMsgs.length - 1];
+    const assistantCount = messages.filter(m => m.role === 'assistant').length;
+
+    const systemPreview = systemMsg ? truncateWords(typeof systemMsg.content === 'string' ? systemMsg.content : '', 100) : '(none)';
+    const userPreview = lastUserMsg ? truncateWords(typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '', 100) : '(none)';
+
+    const detail = `Total messages: ${messages.length} (${userMsgs.length} user, ${assistantCount} assistant, ${systemMsg ? 1 : 0} system)\n\n` +
+        `── System Prompt (first 100 words) ──\n${systemPreview}\n\n` +
+        `── Last User Message (first 100 words) ──\n${userPreview}`;
+
+    addDebugLog('info', `${label}: ${messages.length} messages`, detail);
+}
+
+/**
+ * Log writer config details.
+ */
+function logWriterConfig(label, config) {
+    const keySource = config.apiKey ? 'custom key' : 'ST proxy (no key needed)';
+    addDebugLog('info', `${label} config: ${config.provider}/${config.model} | temp=${config.temperature} | maxTokens=${config.maxTokens} | key=${keySource}`);
+}
+
 function fireParallelWriters() {
     const settings = getSettings();
     const capturedMessages = getCapturedPrompt();
@@ -197,6 +226,9 @@ function fireParallelWriters() {
         return;
     }
 
+    // Log the captured prompt summary
+    logPromptSummary(capturedMessages, 'Captured prompt');
+
     const signal = abortController ? abortController.signal : undefined;
 
     // Writer 2
@@ -204,13 +236,22 @@ function fireParallelWriters() {
         try {
             const messages = modifyPromptForWriter(capturedMessages, settings.writer2);
             const config = buildLLMConfig(settings.writer2, settings);
-            addDebugLog('info', `Firing Writer 2: ${config.provider}/${config.model}`);
+            logWriterConfig('Writer 2', config);
+
+            // Log if system prompt was modified
+            if (settings.writer2.systemPromptMode === 'replace' && settings.writer2.systemPrompt) {
+                addDebugLog('info', 'Writer 2: system prompt REPLACED', truncateWords(settings.writer2.systemPrompt, 100));
+            } else if (settings.writer2.systemPromptMode === 'append' && settings.writer2.systemPromptSuffix) {
+                addDebugLog('info', 'Writer 2: system prompt APPENDED', truncateWords(settings.writer2.systemPromptSuffix, 100));
+            }
+
             writer2Promise = callLLM(messages, config, signal);
         } catch (err) {
             addDebugLog('fail', `Writer 2 setup error: ${err.message}`);
             writer2Promise = Promise.reject(err);
         }
     } else {
+        addDebugLog('info', `Writer 2: ${!settings.writer2?.enabled ? 'disabled' : 'no model selected'}`);
         writer2Promise = null;
     }
 
@@ -219,13 +260,21 @@ function fireParallelWriters() {
         try {
             const messages = modifyPromptForWriter(capturedMessages, settings.writer3);
             const config = buildLLMConfig(settings.writer3, settings);
-            addDebugLog('info', `Firing Writer 3: ${config.provider}/${config.model}`);
+            logWriterConfig('Writer 3', config);
+
+            if (settings.writer3.systemPromptMode === 'replace' && settings.writer3.systemPrompt) {
+                addDebugLog('info', 'Writer 3: system prompt REPLACED', truncateWords(settings.writer3.systemPrompt, 100));
+            } else if (settings.writer3.systemPromptMode === 'append' && settings.writer3.systemPromptSuffix) {
+                addDebugLog('info', 'Writer 3: system prompt APPENDED', truncateWords(settings.writer3.systemPromptSuffix, 100));
+            }
+
             writer3Promise = callLLM(messages, config, signal);
         } catch (err) {
             addDebugLog('fail', `Writer 3 setup error: ${err.message}`);
             writer3Promise = Promise.reject(err);
         }
     } else {
+        addDebugLog('info', `Writer 3: ${!settings.writer3?.enabled ? 'disabled' : 'no model selected'}`);
         writer3Promise = null;
     }
 }
@@ -273,6 +322,8 @@ async function runJudgePipeline(messageIndex) {
     const context = getContext();
     const signal = abortController ? abortController.signal : undefined;
 
+    const pipelineStartTime = performance.now();
+
     try {
         // ── Gather Writer 1 output ──────────────────────────────────────
         const writer1Text = context.chat[messageIndex]?.mes;
@@ -282,7 +333,7 @@ async function runJudgePipeline(messageIndex) {
             resetPipeline();
             return;
         }
-        addDebugLog('pass', `Writer 1 done (${writer1Text.length} chars)`);
+        addDebugLog('pass', `Writer 1 done (${writer1Text.length} chars)`, writer1Text);
 
         // ── Await Writers 2+3 ───────────────────────────────────────────
         updateIndicator('Waiting for parallel writers...');
@@ -299,8 +350,9 @@ async function runJudgePipeline(messageIndex) {
         settled.forEach((result, idx) => {
             const label = promiseLabels[idx];
             if (result.status === 'fulfilled' && result.value?.content) {
-                addDebugLog('pass', `${label} done (${result.value.content.length} chars, ${(result.value.elapsed / 1000).toFixed(2)}s)`);
-                writerResults.push({ label, content: result.value.content, ok: true });
+                const elapsed = (result.value.elapsed / 1000).toFixed(2);
+                addDebugLog('pass', `${label} done (${result.value.content.length} chars, ${elapsed}s)`, result.value.content);
+                writerResults.push({ label, content: result.value.content, ok: true, elapsed: result.value.elapsed });
             } else {
                 const reason = result.status === 'rejected'
                     ? result.reason?.message || String(result.reason)
@@ -336,9 +388,7 @@ async function runJudgePipeline(messageIndex) {
 
         // ── Run the Judge ───────────────────────────────────────────────
         updateIndicator('Judge is evaluating...');
-        addDebugLog('info', `Running Judge on ${successfulWriters.length} writer outputs`);
 
-        // FIX: buildJudgeMessages expects individual response strings, not an array
         const responseA = successfulWriters[0]?.content || null;
         const responseB = successfulWriters[1]?.content || null;
         const responseC = successfulWriters[2]?.content || null;
@@ -347,11 +397,21 @@ async function runJudgePipeline(messageIndex) {
         const judgeMessages = buildJudgeMessages(judgePrompt, responseA, responseB, responseC);
         const judgeConfig = buildLLMConfig(settings.judge, settings);
 
+        // Log judge config
+        const judgeKeySource = judgeConfig.apiKey ? 'custom key' : 'ST proxy';
+        addDebugLog('info', `Judge config: ${judgeConfig.provider}/${judgeConfig.model} | temp=${judgeConfig.temperature} | maxTokens=${judgeConfig.maxTokens} | key=${judgeKeySource}`);
+
+        // Log judge prompt (first 100 words of system + user)
+        const judgeSysContent = judgeMessages.find(m => m.role === 'system')?.content || '';
+        const judgeUserContent = judgeMessages.find(m => m.role === 'user')?.content || '';
+        addDebugLog('info', `Judge prompt: system=${judgeSysContent.length} chars, user=${judgeUserContent.length} chars (${successfulWriters.length} responses)`,
+            `── Judge System Prompt (first 100 words) ──\n${truncateWords(judgeSysContent, 100)}\n\n── Judge User Prompt (first 100 words) ──\n${truncateWords(judgeUserContent, 100)}`);
+
         let judgeContent;
         try {
             const judgeResult = await callLLM(judgeMessages, judgeConfig, signal);
             judgeContent = judgeResult.content;
-            addDebugLog('pass', `Judge done (${judgeContent.length} chars, ${(judgeResult.elapsed / 1000).toFixed(2)}s)`);
+            addDebugLog('pass', `Judge done (${judgeContent.length} chars, ${(judgeResult.elapsed / 1000).toFixed(2)}s)`, judgeContent);
         } catch (judgeDirectErr) {
             // Fallback: try generateQuietPrompt if the direct call fails
             addDebugLog('info', `Judge direct API failed, trying generateQuietPrompt fallback: ${judgeDirectErr.message}`);
@@ -363,7 +423,7 @@ async function runJudgePipeline(messageIndex) {
                 if (!judgeContent || typeof judgeContent !== 'string' || !judgeContent.trim()) {
                     throw new Error('generateQuietPrompt returned empty');
                 }
-                addDebugLog('pass', `Judge fallback done (${judgeContent.length} chars)`);
+                addDebugLog('pass', `Judge fallback done (${judgeContent.length} chars)`, judgeContent);
             } catch (fallbackErr) {
                 addDebugLog('fail', `Judge fallback also failed: ${fallbackErr.message}`);
                 if (settings.showToast) {
@@ -395,7 +455,14 @@ async function runJudgePipeline(messageIndex) {
             );
         }
 
-        addDebugLog('pass', `Pipeline complete for message ${messageIndex}`);
+        // ── Final summary ───────────────────────────────────────────────
+        const totalTime = ((performance.now() - pipelineStartTime) / 1000).toFixed(1);
+        const writerSummary = writerResults.map(w => {
+            if (w.ok) return `${w.label}: ✓ ${w.content.length} chars`;
+            return `${w.label}: ✗ ${w.error}`;
+        }).join('\n');
+        addDebugLog('pass', `Pipeline complete (${totalTime}s total, ${successfulWriters.length} writers, msg #${messageIndex})`,
+            `── Pipeline Summary ──\nTotal time: ${totalTime}s\nWriters:\n${writerSummary}\nJudge model: ${judgeConfig.provider}/${judgeConfig.model}\nJudge output: ${judgeContent.length} chars\nFinal message index: ${messageIndex}`);
 
         // Store arena metadata on the message
         const msg = context.chat[messageIndex];
@@ -480,7 +547,9 @@ export function initPipeline() {
         // Ignore if pipeline is already active (re-entrancy guard)
         if (pipelineActive) return;
 
-        addDebugLog('info', 'GENERATION_STARTED — arming pipeline');
+        // Log Writer 1 info (uses ST's native connection)
+        const stModel = getContext().onlineStatus ?? 'unknown';
+        addDebugLog('info', `GENERATION_STARTED — arming pipeline (Writer 1 via ST native connection)`);
 
         pipelineActive = true;
         pendingMessageIndex = null;
