@@ -160,15 +160,19 @@ function updateStatus(state) {
 
 function getPresetData() {
     // Snapshot the saveable settings (not enabled, not presets themselves)
-    return {
+    // Strip API keys to prevent accidental leakage when sharing presets/backups
+    const data = {
         writer2: structuredClone(extensionSettings.writer2),
         writer3: structuredClone(extensionSettings.writer3),
         judge: structuredClone(extensionSettings.judge),
-        sharedApiKey: extensionSettings.sharedApiKey,
         sharedProvider: extensionSettings.sharedProvider,
         minWriters: extensionSettings.minWriters,
         timeoutMs: extensionSettings.timeoutMs,
     };
+    delete data.writer2.apiKey;
+    delete data.writer3.apiKey;
+    delete data.judge.apiKey;
+    return data;
 }
 
 function savePreset(name) {

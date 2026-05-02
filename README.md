@@ -1,67 +1,103 @@
 # BF Agentic Curator
 
-A SillyTavern extension that runs multiple AI writers in parallel and uses a judge LLM to filter out consensus patterns (slop) and keep only unique elements (signal).
+**Kill the cliche. Keep the strange.**
 
-## How It Works
+A SillyTavern extension that runs multiple AI writers in parallel, identifies what they all default to (the consensus — predictable, safe, generic), throws it away, and builds one response from what's left: the surprising, specific, alive parts that only one writer found.
 
-1. **Writer 1** generates via SillyTavern's native connection (your normal setup)
-2. **Writers 2 & 3** fire simultaneously via direct API calls using the same prompt
-3. A **Judge** receives all outputs, identifies what they share (consensus = predictable LLM patterns), extracts what's unique to only one (signal = surprising, specific, alive), and synthesizes a single response built from signal only
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/bfgith)
 
-The result replaces the original message. All writer outputs are stored in message metadata for reference.
+---
 
-## Why
+## The Problem
 
-LLM roleplay has a consensus problem. Ask three models to continue the same scene and they'll produce eerily similar responses — the same emotional arcs, the same physical gestures, the same safe resolutions. This extension breaks that pattern by treating similarity as a signal to cut, not keep.
+Ask three LLMs to continue the same roleplay scene. You'll get eerily similar responses — the same emotional arcs, the same "ghost of a smile," the same safe resolutions, the same breath-catching jaw-clenching lip-biting stage directions. That similarity isn't a coincidence. It's the model's path of least resistance. It's slop.
+
+## The Fix
+
+BF Agentic Curator treats that similarity as a signal to **cut**, not keep.
+
+1. **Writer 1** generates via your normal SillyTavern connection
+2. **Writers 2 & 3** fire simultaneously via direct API calls — same prompt, different models/settings
+3. A **Judge** receives all outputs, identifies shared patterns (dead on arrival), extracts what's unique (the signal), and assembles one response from the surviving material
+
+The result replaces the original message. The whole process is invisible to the reader — they just get a better response.
+
+## Features
+
+- **Dynamic model selection** — pulls directly from SillyTavern's OpenRouter model list, always up to date
+- **ST backend proxy** — no API key entry needed, uses your existing SillyTavern keys automatically
+- **6 built-in judge presets** — from strict semantic overlap detection to "rescue the strange," plus a hybrid combining the best of all approaches
+- **Per-writer chat completion presets** — each writer can use a different ST preset for different generation styles
+- **Extension presets** — save/load entire configurations (writer models, judge settings, everything) with one click
+- **Live debug log** — full visibility into what each writer produced, what the judge decided, timing, and prompt details
+- **Skip button** — abort the judge pipeline mid-run if you don't want to wait
+- **Swipe support** — works correctly with SillyTavern's swipe feature
 
 ## Installation
 
-1. Copy the `bf-agentic-curator` folder to your SillyTavern's `data/default-user/extensions/third-party/` directory
+1. Copy `bf-agentic-curator` to `data/default-user/extensions/third-party/`
 2. Restart SillyTavern
-3. Enable the extension in the Extensions panel
+3. Enable in the Extensions panel
+
+## Quick Start
+
+1. Open the **BF Agentic Curator** panel in Extensions
+2. Enable the extension
+3. Go to the **Writers** tab — enable Writer 2, pick a model (the dropdown shows your ST models)
+4. Go to the **Judge** tab — pick a model and choose a judge preset
+5. Send a message. The extension handles everything else.
+
+No API key entry needed if you're already connected to OpenRouter in SillyTavern.
 
 ## Configuration
 
-Open the **BF Agentic Curator** panel in Extensions settings. Four tabs:
+### General Tab
+- **Extension Presets** — save/load/delete named configurations
+- **Shared API Settings** — default provider and API key fallback
+- **Behavior** — minimum writers required, pipeline timeout, toast notifications
 
-### General
-- **Shared API Settings** — Default provider and API key used when a writer/judge doesn't have its own
-- **Behavior** — Minimum writers required, timeout, toast notifications
+### Writers Tab
+- **Writer 1** uses your existing SillyTavern connection — zero config
+- **Writers 2 & 3** — model (from ST's list), provider, optional API key override, temperature, max tokens
+- **Chat Completion Preset** per writer — use different ST presets for different generation styles
+- **System Prompt Suffix** — append instructions to push each writer in a different direction
 
-### Writers
-- Writer 1 uses your existing SillyTavern connection — no config needed
-- **Writer 2 & 3** — Set provider (OpenRouter / Anthropic / OpenAI-compatible), model, API key, temperature, and max tokens
-- Each writer can have a different **system prompt** (append to existing or replace entirely) to push diversity
+### Judge Tab
+- Model, provider, temperature, max tokens
+- **Judge Prompt Preset** dropdown with 7 options:
+  - **Default** — the original anti-consensus filter
+  - **Red Pen** — catches the judge's own autopilot tendencies
+  - **Scalpel** — bans specific LLM comfort verbs by name (whisper, murmur, trail off...)
+  - **Manuscript Editor** — kills tonal consensus, not just content overlap
+  - **Semantic Overlap** — strictest pattern matching ("barely a whisper" = "spoke softly")
+  - **Rescue the Strange** — includes a self-test: "does this read like AI prose? Then you failed"
+  - **Hybrid** — best elements from all five combined
+- **Custom** — write your own judge prompt from scratch
 
-### Judge
-- Provider, model, API key, temperature, max tokens for the judge call
-- **Custom Judge Prompt** — Fully editable. Leave blank to use the built-in anti-consensus filter. Supports `{response_a}`, `{response_b}`, `{response_c}` placeholders
-
-### Tools
-- **Debug log** — Live timestamped log of pipeline activity (writer timings, judge results, errors)
-- **Reset All** — Factory reset all settings
-
-## Supported Providers
-
-| Provider | Notes |
-|---|---|
-| **OpenRouter** | Recommended. Permissive CORS, wide model selection |
-| **Anthropic** | Direct API. Uses `anthropic-dangerous-direct-browser-access` header for browser calls |
-| **OpenAI-Compatible** | Any endpoint that follows the OpenAI chat completions format |
+### Tools Tab
+- **Debug log** — timestamped pipeline activity with expandable full-text details
+- **Reset All** — factory reset
 
 ## Tips
 
-- Use **different models** or **different temperatures** across writers for maximum diversity
-- Use **system prompt suffixes** to push each writer in a different direction (e.g., one focused on dialogue, one on action, one on internal monologue)
-- The judge works best with a capable model (Claude, GPT-4o, etc.) since it needs to analyze and synthesize
-- Set **Min Writers** to 2 if you want the pipeline to still work when one writer fails
-- Enable **Debug Mode** in the Tools tab to see exactly what each writer produced and how long it took
+- Use **different models** across writers for maximum diversity — that's the whole point
+- Use **system prompt suffixes** to push each writer in a different direction (dialogue-focused, action-heavy, internal monologue)
+- The judge works best with a capable model (Claude Sonnet/Opus, GPT-4o) since it needs to analyze and synthesize
+- Try the **Hybrid** judge preset first — it combines the strongest ideas from all five approaches
+- Set **Min Writers** to 2 so the pipeline still works if one writer fails
+- Enable **Debug Mode** to see exactly what each writer produced and what the judge kept
 
 ## Requirements
 
-- SillyTavern (recent version with `CHAT_COMPLETION_PROMPT_READY` event support)
-- API key(s) for your chosen provider(s)
-- At least one writer (2 or 3) configured in addition to your native SillyTavern connection
+- SillyTavern (recent version)
+- At least one writer (2 or 3) configured with a model
+- API keys configured in SillyTavern (the extension uses ST's stored keys automatically)
+
+## Support
+
+Find this useful? Consider supporting development:
+
+[![Ko-fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/bfgith)
 
 ## License
 

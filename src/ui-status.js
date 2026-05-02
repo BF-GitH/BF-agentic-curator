@@ -46,7 +46,9 @@ export function showIndicator(text) {
     }
     if (!indicator) return;
 
-    indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span class="bf-curator-indicator-text">${text}</span>`;
+    // Build indicator content safely (no innerHTML with interpolated text)
+    indicator.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span class="bf-curator-indicator-text"></span>';
+    indicator.querySelector('.bf-curator-indicator-text').textContent = text;
 
     // Add the skip button inside the indicator if not already there
     if (!indicator.querySelector('#bf_curator_inline_skip')) {
