@@ -270,51 +270,100 @@ function populateSystemPromptDropdown(selectId) {
     select.value = currentValue;
 }
 
+// Cached model list from OpenRouter (shared across all dropdowns)
+let cachedModels = null;
+let modelFetchPromise = null;
+
 /**
- * Populate a model dropdown from ST's OpenRouter model list (#openrouter_models).
- * Falls back to a minimal hardcoded list if ST's dropdown isn't available.
+ * Fetch the model list from OpenRouter's public API.
+ * Caches the result so multiple dropdowns don't re-fetch.
  */
-function populateModelDropdown(selectId) {
+async function fetchOpenRouterModels() {
+    if (cachedModels) return cachedModels;
+    if (modelFetchPromise) return modelFetchPromise;
+
+    modelFetchPromise = (async () => {
+        try {
+            console.log('[BFCurator] Fetching model list from OpenRouter...');
+            const resp = await fetch('https://openrouter.ai/api/v1/models');
+            if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+            const data = await resp.json();
+
+            // Group models by provider (first part of model ID before '/')
+            const grouped = {};
+            for (const model of data.data || []) {
+                const id = model.id;
+                const name = model.name || id;
+                const provider = id.includes('/') ? id.split('/')[0] : 'other';
+                if (!grouped[provider]) grouped[provider] = [];
+                grouped[provider].push({ id, name });
+            }
+
+            // Sort providers alphabetically, models within each provider alphabetically
+            const sorted = Object.entries(grouped)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([provider, models]) => ({
+                    provider,
+                    models: models.sort((a, b) => a.name.localeCompare(b.name)),
+                }));
+
+            cachedModels = sorted;
+            console.log(`[BFCurator] Loaded ${data.data?.length || 0} models from OpenRouter`);
+            return sorted;
+        } catch (err) {
+            console.error('[BFCurator] Failed to fetch OpenRouter models:', err.message);
+            return null;
+        } finally {
+            modelFetchPromise = null;
+        }
+    })();
+
+    return modelFetchPromise;
+}
+
+/**
+ * Populate a model dropdown from the OpenRouter API.
+ * Fetches once, caches, and shares across all dropdowns.
+ */
+async function populateModelDropdown(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
 
     const currentValue = select.value;
 
+    // Show loading state
+    select.disabled = true;
+    if (select.options.length <= 1) {
+        select.options[0].textContent = '-- Loading models... --';
+    }
+
+    const models = await fetchOpenRouterModels();
+
     // Clear all options except the placeholder
     while (select.options.length > 1) {
         select.remove(1);
     }
+    select.options[0].textContent = '-- Select Model --';
+    select.disabled = false;
 
-    // Try to clone from ST's OpenRouter model dropdown
-    const stModels = document.getElementById('openrouter_models');
-    if (stModels && stModels.options.length > 1) {
-        // Clone all options and optgroups from ST's dropdown
-        Array.from(stModels.children).forEach(child => {
-            if (child.tagName === 'OPTGROUP') {
-                const group = document.createElement('optgroup');
-                group.label = child.label;
-                Array.from(child.options).forEach(opt => {
-                    if (opt.value) {
-                        const newOpt = document.createElement('option');
-                        newOpt.value = opt.value;
-                        newOpt.textContent = opt.textContent;
-                        group.appendChild(newOpt);
-                    }
-                });
-                select.appendChild(group);
-            } else if (child.tagName === 'OPTION' && child.value) {
-                const newOpt = document.createElement('option');
-                newOpt.value = child.value;
-                newOpt.textContent = child.textContent;
-                select.appendChild(newOpt);
+    if (models && models.length > 0) {
+        for (const group of models) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = group.provider;
+            for (const model of group.models) {
+                const opt = document.createElement('option');
+                opt.value = model.id;
+                opt.textContent = model.name;
+                optgroup.appendChild(opt);
             }
-        });
-        console.log(`[BFCurator] Populated ${selectId} with ${select.options.length - 1} models from ST`);
+            select.appendChild(optgroup);
+        }
+        console.log(`[BFCurator] Populated ${selectId} with models from OpenRouter API`);
     } else {
-        console.warn('[BFCurator] ST OpenRouter model list not found, using empty dropdown. Type a model ID or refresh later.');
+        console.warn(`[BFCurator] No models available for ${selectId}`);
     }
 
-    // Restore previous selection if it still exists, or add it as a custom option
+    // Restore previous selection, or add as custom option if not in list
     if (currentValue) {
         if (!Array.from(select.options).some(o => o.value === currentValue)) {
             const customOpt = document.createElement('option');
@@ -323,6 +372,19 @@ function populateModelDropdown(selectId) {
             select.insertBefore(customOpt, select.options[1]);
         }
         select.value = currentValue;
+    }
+}
+
+/**
+ * Force re-fetch from OpenRouter API (clears cache).
+ */
+async function refreshModelList(selectId, savedValue) {
+    cachedModels = null;
+    modelFetchPromise = null;
+    await populateModelDropdown(selectId);
+    if (savedValue) {
+        const select = document.getElementById(selectId);
+        if (select) select.value = savedValue;
     }
 }
 
@@ -425,11 +487,10 @@ function bindWriterEvents(id, section) {
     $(`#bf_curator_${id}_model`).val(s.model)
         .off('change').on('change', function () { s.model = this.value; saveSettings(); });
 
-    // Refresh models button
-    $(`#bf_curator_${id}_refreshModels`).off('click').on('click', function () {
-        populateModelDropdown(`bf_curator_${id}_model`);
-        $(`#bf_curator_${id}_model`).val(s.model);
-        if (typeof toastr !== 'undefined') toastr.info('Model list refreshed from ST', 'BF Curator');
+    // Refresh models button (clears cache, re-fetches from OpenRouter)
+    $(`#bf_curator_${id}_refreshModels`).off('click').on('click', async function () {
+        await refreshModelList(`bf_curator_${id}_model`, s.model);
+        if (typeof toastr !== 'undefined') toastr.info('Model list refreshed from OpenRouter', 'BF Curator');
     });
 
     $(`#bf_curator_${id}_apiKey`).val(s.apiKey)
@@ -485,11 +546,10 @@ function bindJudgeEvents() {
     $('#bf_curator_judge_model').val(s.model)
         .off('change').on('change', function () { s.model = this.value; saveSettings(); });
 
-    // Refresh models button
-    $('#bf_curator_judge_refreshModels').off('click').on('click', function () {
-        populateModelDropdown('bf_curator_judge_model');
-        $('#bf_curator_judge_model').val(s.model);
-        if (typeof toastr !== 'undefined') toastr.info('Model list refreshed from ST', 'BF Curator');
+    // Refresh models button (clears cache, re-fetches from OpenRouter)
+    $('#bf_curator_judge_refreshModels').off('click').on('click', async function () {
+        await refreshModelList('bf_curator_judge_model', s.model);
+        if (typeof toastr !== 'undefined') toastr.info('Model list refreshed from OpenRouter', 'BF Curator');
     });
 
     $('#bf_curator_judge_apiKey').val(s.apiKey)
