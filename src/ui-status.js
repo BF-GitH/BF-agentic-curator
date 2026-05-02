@@ -46,7 +46,23 @@ export function showIndicator(text) {
     }
     if (!indicator) return;
 
-    indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${text}`;
+    indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span class="bf-curator-indicator-text">${text}</span>`;
+
+    // Add the skip button inside the indicator if not already there
+    if (!indicator.querySelector('#bf_curator_inline_skip')) {
+        const skipBtn = document.createElement('button');
+        skipBtn.id = 'bf_curator_inline_skip';
+        skipBtn.className = 'menu_button bf-curator-inline-skip';
+        skipBtn.innerHTML = '<i class="fa-solid fa-forward"></i> Skip Judge';
+        skipBtn.addEventListener('click', () => {
+            console.log(`${LOG_PREFIX} Inline skip button clicked.`);
+            if (typeof skipCallback === 'function') {
+                skipCallback();
+            }
+        });
+        indicator.appendChild(skipBtn);
+    }
+
     indicator.style.display = 'flex';
 
     _resetIndicatorTimeout();
@@ -60,7 +76,15 @@ export function updateIndicator(text) {
     const indicator = document.getElementById('bf_curator_indicator');
     if (!indicator) return;
 
-    indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${text}`;
+    // Only update the text span, keep the skip button intact
+    const textSpan = indicator.querySelector('.bf-curator-indicator-text');
+    if (textSpan) {
+        textSpan.textContent = text;
+    } else {
+        // Fallback: rebuild (shouldn't happen but just in case)
+        showIndicator(text);
+        return;
+    }
 
     _resetIndicatorTimeout();
     console.log(`${LOG_PREFIX} Status: ${text}`);
