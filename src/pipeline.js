@@ -10,7 +10,7 @@
  * 6. Reveals the message
  */
 
-import { getSettings, setStatusIndicator, resolveApiKey as resolveApiKeyFromSettings, getSystemPromptContent } from './settings.js';
+import { getSettings, setStatusIndicator, resolveApiKey as resolveApiKeyFromSettings, getWriterPresetName } from './settings.js';
 import { setArmedCheck, getCapturedPrompt, clearCapturedPrompt } from './interceptor.js';
 import { callLLM } from './api-adapters.js';
 import { buildJudgeMessages, getDefaultJudgePrompt } from './judge.js';
@@ -87,11 +87,8 @@ async function modifyPromptForWriter(messages, writerConfig) {
     // Handle preset-based system prompt replacement
     const preset = writerConfig.systemPromptPreset;
     if (preset && preset !== '__custom__') {
-        // Named preset - try to fetch content
-        const presetContent = await getSystemPromptContent(preset);
-        if (presetContent) {
-            systemMsg.content = presetContent;
-        }
+        // Named preset — prompt modification is handled at the API call level
+        // (the preset name is stored on the config for callLLM to use)
     } else if (preset === '__custom__' && writerConfig.systemPrompt) {
         // Custom replacement
         systemMsg.content = writerConfig.systemPrompt;
@@ -118,6 +115,7 @@ function buildLLMConfig(writerOrJudgeConfig, settings) {
         temperature: writerOrJudgeConfig.temperature,
         maxTokens: writerOrJudgeConfig.maxTokens,
         baseUrl: writerOrJudgeConfig.baseUrl,
+        presetName: getWriterPresetName(writerOrJudgeConfig),
     };
 }
 

@@ -61,9 +61,9 @@ const DEFAULT_SETTINGS = {
     showToast: true,
     debugMode: false,
 
-    // Connection profiles (like validator)
-    useProfile: false,
-    curatorProfile: '',
+    // Extension presets
+    presets: {},        // { "PresetName": { writer2: {...}, writer3: {...}, judge: {...}, sharedProvider: '...', minWriters: N } }
+    currentPreset: '',  // Name of currently loaded preset
 };
 
 let extensionSettings = null;
@@ -155,43 +155,85 @@ function updateStatus(state) {
     }
 }
 
-// ─── Connection profiles ───
+// ─── Extension presets ───
 
-function getConnectionProfiles() {
-    try {
-        const profiles = getContext().extensionSettings?.connectionManager?.profiles;
-        return Array.isArray(profiles) ? profiles : [];
-    } catch (e) {
-        return [];
-    }
+function getPresetData() {
+    // Snapshot the saveable settings (not enabled, not presets themselves)
+    return {
+        writer2: structuredClone(extensionSettings.writer2),
+        writer3: structuredClone(extensionSettings.writer3),
+        judge: structuredClone(extensionSettings.judge),
+        sharedApiKey: extensionSettings.sharedApiKey,
+        sharedProvider: extensionSettings.sharedProvider,
+        minWriters: extensionSettings.minWriters,
+        timeoutMs: extensionSettings.timeoutMs,
+    };
 }
 
-function getCurrentProfileId() {
-    try {
-        return getContext().extensionSettings?.connectionManager?.selectedProfile || null;
-    } catch (e) {
-        return null;
-    }
+function savePreset(name) {
+    if (!name) return;
+    extensionSettings.presets[name] = getPresetData();
+    extensionSettings.currentPreset = name;
+    saveSettings();
+    updatePresetDropdown();
+    console.log(`${LOG_PREFIX} Preset saved: ${name}`);
+    if (typeof toastr !== 'undefined') toastr.success(`Preset "${name}" saved`, 'BF Curator');
 }
 
-function populateProfileDropdown() {
-    const select = document.getElementById('bf_curator_curatorProfile');
+function loadPreset(name) {
+    const preset = extensionSettings.presets[name];
+    if (!preset) {
+        if (typeof toastr !== 'undefined') toastr.error(`Preset "${name}" not found`, 'BF Curator');
+        return;
+    }
+
+    // Apply preset values
+    for (const key of Object.keys(preset)) {
+        if (typeof preset[key] === 'object' && preset[key] !== null) {
+            extensionSettings[key] = structuredClone(preset[key]);
+        } else {
+            extensionSettings[key] = preset[key];
+        }
+    }
+    extensionSettings.currentPreset = name;
+    saveSettings();
+
+    // Reload UI to reflect new values
+    if (typeof toastr !== 'undefined') toastr.success(`Preset "${name}" loaded`, 'BF Curator');
+    console.log(`${LOG_PREFIX} Preset loaded: ${name}`);
+    location.reload();
+}
+
+function deletePreset(name) {
+    if (!name) return;
+    if (!confirm(`Delete preset "${name}"?`)) return;
+    delete extensionSettings.presets[name];
+    if (extensionSettings.currentPreset === name) {
+        extensionSettings.currentPreset = '';
+    }
+    saveSettings();
+    updatePresetDropdown();
+    if (typeof toastr !== 'undefined') toastr.info(`Preset "${name}" deleted`, 'BF Curator');
+}
+
+function updatePresetDropdown() {
+    const select = document.getElementById('bf_curator_preset_select');
     if (!select) return;
 
-    const currentValue = select.value;
-    select.innerHTML = '<option value="">-- Select Profile --</option>';
+    const currentValue = select.value || extensionSettings.currentPreset;
+    select.innerHTML = '<option value="">-- Select Preset --</option>';
 
-    const profiles = getConnectionProfiles();
-    const activeId = getCurrentProfileId();
-
-    for (const profile of profiles) {
+    const names = Object.keys(extensionSettings.presets || {}).sort();
+    for (const name of names) {
         const opt = document.createElement('option');
-        opt.value = profile.id;
-        opt.textContent = profile.name + (profile.id === activeId ? ' (current)' : '');
+        opt.value = name;
+        opt.textContent = name;
         select.appendChild(opt);
     }
 
-    select.value = currentValue || extensionSettings.curatorProfile || '';
+    if (currentValue && extensionSettings.presets[currentValue]) {
+        select.value = currentValue;
+    }
 }
 
 // ─── System prompt presets ───
@@ -207,8 +249,8 @@ function populateSystemPromptDropdown(selectId) {
         select.remove(2);
     }
 
-    // Read from ST's sysprompt dropdown
-    const stSelect = document.getElementById('sysprompt_select');
+    // Read from ST's chat completion presets dropdown
+    const stSelect = document.getElementById('settings_preset_openai');
     if (stSelect) {
         Array.from(stSelect.options).forEach(opt => {
             if (opt.value) {
@@ -224,39 +266,14 @@ function populateSystemPromptDropdown(selectId) {
 }
 
 /**
- * Try to fetch a system prompt's content by name.
- * Tries multiple methods with fallbacks.
+ * Get the name of a chat completion preset selected for a writer.
+ * The pipeline will switch to this preset before making the ST proxy call.
+ * Returns null if no preset selected or if it's custom.
  */
-export async function getSystemPromptContent(presetName) {
-    if (!presetName || presetName === '__custom__') return null;
-
-    // Method 1: If currently selected in ST, read from textarea
-    const stSelect = document.getElementById('sysprompt_select');
-    if (stSelect && stSelect.value === presetName) {
-        const textarea = document.getElementById('sysprompt_textarea');
-        if (textarea && textarea.value) return textarea.value;
-    }
-
-    // Method 2: Try fetching from ST server
-    try {
-        const headers = getContext().getRequestHeaders?.();
-        if (headers) {
-            const response = await fetch('/api/presets/get', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ apiId: 'sysprompt', name: presetName }),
-            });
-            if (response.ok) {
-                const data = await response.json();
-                if (typeof data === 'string') return data;
-                if (data?.content) return data.content;
-            }
-        }
-    } catch (e) {
-        console.warn(`${LOG_PREFIX} Could not fetch system prompt preset '${presetName}':`, e.message);
-    }
-
-    return null;
+export function getWriterPresetName(writerConfig) {
+    const preset = writerConfig?.systemPromptPreset;
+    if (!preset || preset === '__custom__') return null;
+    return preset;
 }
 
 // ─── Test connection ───
@@ -451,23 +468,36 @@ function bindGlobalEvents() {
     $('#bf_curator_showToast').prop('checked', extensionSettings.showToast)
         .off('change').on('change', function () { extensionSettings.showToast = this.checked; saveSettings(); });
 
-    // Connection profile
-    $('#bf_curator_useProfile').prop('checked', extensionSettings.useProfile)
-        .off('change').on('change', function () {
-            extensionSettings.useProfile = this.checked;
-            $('#bf_curator_profile_section').toggle(this.checked);
-            saveSettings();
-        });
+    // Extension presets
+    updatePresetDropdown();
 
-    $('#bf_curator_profile_section').toggle(extensionSettings.useProfile);
-    populateProfileDropdown();
+    $('#bf_curator_preset_select').off('change').on('change', function () {
+        extensionSettings.currentPreset = this.value;
+        saveSettings();
+    });
 
-    $('#bf_curator_curatorProfile').val(extensionSettings.curatorProfile)
-        .off('change').on('change', function () { extensionSettings.curatorProfile = this.value; saveSettings(); });
+    $('#bf_curator_preset_save').off('click').on('click', function () {
+        const select = document.getElementById('bf_curator_preset_select');
+        let name = select?.value;
+        if (!name) {
+            name = prompt('Enter preset name:');
+        }
+        if (name) savePreset(name);
+    });
 
-    $('#bf_curator_refreshProfiles').off('click').on('click', function () {
-        populateProfileDropdown();
-        if (typeof toastr !== 'undefined') toastr.info('Profiles refreshed', 'BF Curator');
+    $('#bf_curator_preset_new').off('click').on('click', function () {
+        const name = prompt('Enter new preset name:');
+        if (name) savePreset(name);
+    });
+
+    $('#bf_curator_preset_load').off('click').on('click', function () {
+        const select = document.getElementById('bf_curator_preset_select');
+        if (select?.value) loadPreset(select.value);
+    });
+
+    $('#bf_curator_preset_delete').off('click').on('click', function () {
+        const select = document.getElementById('bf_curator_preset_select');
+        if (select?.value) deletePreset(select.value);
     });
 
     // Debug

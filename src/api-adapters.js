@@ -175,7 +175,7 @@ const ST_SOURCE_MAP = {
  * @returns {Promise<string>}
  */
 async function callSTProxy(messages, config, signal) {
-    const { model, temperature, maxTokens, provider } = config;
+    const { model, temperature, maxTokens, provider, presetName } = config;
     const chatCompletionSource = ST_SOURCE_MAP[provider] || provider;
 
     const headers = SillyTavern.getContext().getRequestHeaders?.();
@@ -191,6 +191,12 @@ async function callSTProxy(messages, config, signal) {
         temperature,
         stream: false,
     };
+
+    // If a chat completion preset name is specified, include it
+    if (presetName) {
+        body.preset = presetName;
+        console.log(`${LOG_PREFIX} Using chat completion preset: ${presetName}`);
+    }
 
     console.log(`${LOG_PREFIX} Calling ST proxy for ${chatCompletionSource}/${model}`);
 

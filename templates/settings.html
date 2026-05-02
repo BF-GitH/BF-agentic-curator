@@ -78,21 +78,30 @@
 
           <hr class="bf-curator-divider" />
 
-          <!-- Connection Profile -->
+          <!-- Extension Presets -->
           <div class="bf-curator-section">
-            <h4>Connection Profile</h4>
-            <p class="bf-curator-helper">Optionally use a different ST connection profile for the curator's proxy calls.</p>
-            <label for="bf_curator_useProfile" class="checkbox_label">
-              <input id="bf_curator_useProfile" type="checkbox" />
-              <span>Use separate curator profile</span>
-            </label>
-            <div id="bf_curator_profile_section" style="display: none;">
-              <div class="bf-curator-inline-field" style="margin-top: 8px;">
-                <select id="bf_curator_curatorProfile" class="text_pole" style="flex: 1;">
-                  <option value="">-- Select Profile --</option>
-                </select>
-                <button id="bf_curator_refreshProfiles" class="menu_button" title="Refresh profiles" style="flex: 0 0 auto; margin-left: 4px;">
-                  <i class="fa-solid fa-refresh"></i>
+            <h4>Presets</h4>
+            <p class="bf-curator-helper">Save and load different curator configurations (writer models, judge settings, etc.)</p>
+            <div class="bf-curator-inline-field">
+              <select id="bf_curator_preset_select" class="text_pole" style="flex: 1;">
+                <option value="">-- Select Preset --</option>
+              </select>
+            </div>
+            <div class="bf-curator-preset-toolbar" style="margin-top: 6px;">
+              <div class="bf-curator-preset-toolbar-safe">
+                <button id="bf_curator_preset_load" class="menu_button" title="Load selected preset">
+                  <i class="fa-solid fa-download"></i> <span class="bf-curator-btn-label">Load</span>
+                </button>
+                <button id="bf_curator_preset_save" class="menu_button" title="Save to selected preset">
+                  <i class="fa-solid fa-save"></i> <span class="bf-curator-btn-label">Save</span>
+                </button>
+                <button id="bf_curator_preset_new" class="menu_button" title="Save as new preset">
+                  <i class="fa-solid fa-plus"></i> <span class="bf-curator-btn-label">New</span>
+                </button>
+              </div>
+              <div class="bf-curator-preset-toolbar-danger">
+                <button id="bf_curator_preset_delete" class="menu_button bf-curator-danger" title="Delete selected preset">
+                  <i class="fa-solid fa-trash"></i> <span class="bf-curator-btn-label">Delete</span>
                 </button>
               </div>
             </div>
@@ -211,7 +220,7 @@
             <hr class="bf-curator-divider" />
 
             <div class="bf-curator-field">
-              <label><small>System Prompt</small></label>
+              <label><small>Chat Completion Preset</small></label>
               <div class="bf-curator-inline-field">
                 <select id="bf_curator_writer2_syspromptPreset" class="text_pole" style="flex: 1;">
                   <option value="">-- Same as Writer 1 --</option>
@@ -221,7 +230,7 @@
                   <i class="fa-solid fa-refresh"></i>
                 </button>
               </div>
-              <p class="bf-curator-helper">Select a saved system prompt, or use "Custom" to type your own.</p>
+              <p class="bf-curator-helper">Select a saved chat completion preset to use for this writer, or use 'Custom' to type your own system prompt.</p>
             </div>
 
             <div id="bf_curator_writer2_customPromptWrap" style="display: none;">
@@ -318,7 +327,7 @@
             <hr class="bf-curator-divider" />
 
             <div class="bf-curator-field">
-              <label><small>System Prompt</small></label>
+              <label><small>Chat Completion Preset</small></label>
               <div class="bf-curator-inline-field">
                 <select id="bf_curator_writer3_syspromptPreset" class="text_pole" style="flex: 1;">
                   <option value="">-- Same as Writer 1 --</option>
@@ -328,7 +337,7 @@
                   <i class="fa-solid fa-refresh"></i>
                 </button>
               </div>
-              <p class="bf-curator-helper">Select a saved system prompt, or use "Custom" to type your own.</p>
+              <p class="bf-curator-helper">Select a saved chat completion preset to use for this writer, or use 'Custom' to type your own system prompt.</p>
             </div>
 
             <div id="bf_curator_writer3_customPromptWrap" style="display: none;">
