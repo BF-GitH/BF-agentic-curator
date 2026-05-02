@@ -4,7 +4,7 @@
  * Design matches bf-agentic-validator pattern (external HTML template, tabs).
  */
 
-import { getDefaultJudgePrompt } from './judge.js';
+import { getDefaultJudgePrompt, JUDGE_PRESETS } from './judge.js';
 
 const LOG_PREFIX = '[BFCurator]';
 
@@ -52,6 +52,7 @@ const DEFAULT_SETTINGS = {
         temperature: 0.3,
         maxTokens: 8192,
         prompt: '',
+        judgePromptPreset: 'default',
     },
 
     sharedApiKey: '',
@@ -266,6 +267,62 @@ function populateSystemPromptDropdown(selectId) {
 }
 
 /**
+ * Populate a model dropdown from ST's OpenRouter model list (#openrouter_models).
+ * Falls back to a minimal hardcoded list if ST's dropdown isn't available.
+ */
+function populateModelDropdown(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const currentValue = select.value;
+
+    // Clear all options except the placeholder
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    // Try to clone from ST's OpenRouter model dropdown
+    const stModels = document.getElementById('openrouter_models');
+    if (stModels && stModels.options.length > 1) {
+        // Clone all options and optgroups from ST's dropdown
+        Array.from(stModels.children).forEach(child => {
+            if (child.tagName === 'OPTGROUP') {
+                const group = document.createElement('optgroup');
+                group.label = child.label;
+                Array.from(child.options).forEach(opt => {
+                    if (opt.value) {
+                        const newOpt = document.createElement('option');
+                        newOpt.value = opt.value;
+                        newOpt.textContent = opt.textContent;
+                        group.appendChild(newOpt);
+                    }
+                });
+                select.appendChild(group);
+            } else if (child.tagName === 'OPTION' && child.value) {
+                const newOpt = document.createElement('option');
+                newOpt.value = child.value;
+                newOpt.textContent = child.textContent;
+                select.appendChild(newOpt);
+            }
+        });
+        console.log(`[BFCurator] Populated ${selectId} with ${select.options.length - 1} models from ST`);
+    } else {
+        console.warn('[BFCurator] ST OpenRouter model list not found, using empty dropdown. Type a model ID or refresh later.');
+    }
+
+    // Restore previous selection if it still exists, or add it as a custom option
+    if (currentValue) {
+        if (!Array.from(select.options).some(o => o.value === currentValue)) {
+            const customOpt = document.createElement('option');
+            customOpt.value = currentValue;
+            customOpt.textContent = `${currentValue} (saved)`;
+            select.insertBefore(customOpt, select.options[1]);
+        }
+        select.value = currentValue;
+    }
+}
+
+/**
  * Get the name of a chat completion preset selected for a writer.
  * The pipeline will switch to this preset before making the ST proxy call.
  * Returns null if no preset selected or if it's custom.
@@ -359,8 +416,17 @@ function bindWriterEvents(id, section) {
     $(`#bf_curator_${id}_provider`).val(s.provider)
         .off('change').on('change', function () { s.provider = this.value; saveSettings(); });
 
+    // Populate model dropdown from ST's OpenRouter list, then set saved value
+    populateModelDropdown(`bf_curator_${id}_model`);
     $(`#bf_curator_${id}_model`).val(s.model)
         .off('change').on('change', function () { s.model = this.value; saveSettings(); });
+
+    // Refresh models button
+    $(`#bf_curator_${id}_refreshModels`).off('click').on('click', function () {
+        populateModelDropdown(`bf_curator_${id}_model`);
+        $(`#bf_curator_${id}_model`).val(s.model);
+        if (typeof toastr !== 'undefined') toastr.info('Model list refreshed from ST', 'BF Curator');
+    });
 
     $(`#bf_curator_${id}_apiKey`).val(s.apiKey)
         .off('input').on('input', function () { s.apiKey = this.value; saveSettings(); });
@@ -410,8 +476,17 @@ function bindJudgeEvents() {
     $('#bf_curator_judge_provider').val(s.provider)
         .off('change').on('change', function () { s.provider = this.value; saveSettings(); });
 
+    // Populate model dropdown from ST's OpenRouter list, then set saved value
+    populateModelDropdown('bf_curator_judge_model');
     $('#bf_curator_judge_model').val(s.model)
         .off('change').on('change', function () { s.model = this.value; saveSettings(); });
+
+    // Refresh models button
+    $('#bf_curator_judge_refreshModels').off('click').on('click', function () {
+        populateModelDropdown('bf_curator_judge_model');
+        $('#bf_curator_judge_model').val(s.model);
+        if (typeof toastr !== 'undefined') toastr.info('Model list refreshed from ST', 'BF Curator');
+    });
 
     $('#bf_curator_judge_apiKey').val(s.apiKey)
         .off('input').on('input', function () { s.apiKey = this.value; saveSettings(); });
@@ -422,19 +497,62 @@ function bindJudgeEvents() {
     $('#bf_curator_judge_maxTokens').val(s.maxTokens)
         .off('input change').on('input change', function () { s.maxTokens = parseInt(this.value, 10) || 8192; saveSettings(); });
 
-    const defaultPrompt = getDefaultJudgePrompt();
-    $('#bf_curator_judge_prompt').val(s.prompt || defaultPrompt)
-        .off('input').on('input', function () {
-            const val = this.value.trim();
-            s.prompt = (val === defaultPrompt.trim()) ? '' : this.value;
-            saveSettings();
-        });
+    // Judge prompt preset dropdown
+    const presetSelect = $('#bf_curator_judge_promptPreset');
+    presetSelect.empty();
 
+    // Add "Custom" option first
+    presetSelect.append('<option value="__custom__">Custom (edit below)</option>');
+
+    // Add built-in presets
+    for (const [key, preset] of Object.entries(JUDGE_PRESETS)) {
+        presetSelect.append(`<option value="${key}">${preset.label}</option>`);
+    }
+
+    // Determine current preset: if saved prompt matches a preset, select it; otherwise "custom"
+    const currentPresetKey = s.judgePromptPreset || 'default';
+    presetSelect.val(currentPresetKey);
+
+    // Set textarea content based on current selection
+    const activePreset = JUDGE_PRESETS[currentPresetKey];
+    if (currentPresetKey === '__custom__' || !activePreset) {
+        $('#bf_curator_judge_prompt').val(s.prompt || getDefaultJudgePrompt()).prop('disabled', false);
+    } else {
+        $('#bf_curator_judge_prompt').val(activePreset.prompt).prop('disabled', true);
+    }
+
+    presetSelect.off('change').on('change', function () {
+        const key = this.value;
+        s.judgePromptPreset = key;
+        if (key === '__custom__') {
+            // Switch to editable custom prompt
+            $('#bf_curator_judge_prompt').val(s.prompt || getDefaultJudgePrompt()).prop('disabled', false);
+        } else {
+            const preset = JUDGE_PRESETS[key];
+            if (preset) {
+                s.prompt = '';  // Clear custom prompt when using a preset
+                $('#bf_curator_judge_prompt').val(preset.prompt).prop('disabled', true);
+            }
+        }
+        saveSettings();
+    });
+
+    // Textarea for custom editing
+    $('#bf_curator_judge_prompt').off('input').on('input', function () {
+        if (s.judgePromptPreset === '__custom__') {
+            s.prompt = this.value;
+            saveSettings();
+        }
+    });
+
+    // Reset button — resets to default preset
     $('#bf_curator_judge_resetPrompt').off('click').on('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         s.prompt = '';
-        $('#bf_curator_judge_prompt').val(getDefaultJudgePrompt());
+        s.judgePromptPreset = 'default';
+        presetSelect.val('default');
+        $('#bf_curator_judge_prompt').val(getDefaultJudgePrompt()).prop('disabled', true);
         saveSettings();
         if (typeof toastr !== 'undefined') toastr.info('Judge prompt reset to default', 'BF Curator');
     });

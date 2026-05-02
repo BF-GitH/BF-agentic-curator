@@ -13,7 +13,7 @@
 import { getSettings, setStatusIndicator, resolveApiKey as resolveApiKeyFromSettings, getWriterPresetName } from './settings.js';
 import { setArmedCheck, getCapturedPrompt, clearCapturedPrompt } from './interceptor.js';
 import { callLLM } from './api-adapters.js';
-import { buildJudgeMessages, getDefaultJudgePrompt } from './judge.js';
+import { buildJudgeMessages, getDefaultJudgePrompt, JUDGE_PRESETS } from './judge.js';
 import {
     showIndicator, hideIndicator, updateIndicator,
     showSkipButton, hideSkipButton, setSkipCallback,
@@ -422,7 +422,14 @@ async function runJudgePipeline(messageIndex) {
         const responseB = successfulWriters[1]?.content || null;
         const responseC = successfulWriters[2]?.content || null;
 
-        const judgePrompt = settings.judge.prompt || getDefaultJudgePrompt();
+        // Resolve judge prompt: preset > custom > default
+        const presetKey = settings.judge.judgePromptPreset || 'default';
+        const presetLabel = (presetKey !== '__custom__' && JUDGE_PRESETS[presetKey])
+            ? JUDGE_PRESETS[presetKey].label : 'Custom';
+        const judgePrompt = (presetKey !== '__custom__' && JUDGE_PRESETS[presetKey])
+            ? JUDGE_PRESETS[presetKey].prompt
+            : (settings.judge.prompt || getDefaultJudgePrompt());
+        addDebugLog('info', `Judge prompt preset: ${presetLabel} (${judgePrompt.length} chars)`);
         const judgeMessages = buildJudgeMessages(judgePrompt, responseA, responseB, responseC);
         const judgeConfig = buildLLMConfig(settings.judge, settings);
 

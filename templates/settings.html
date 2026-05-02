@@ -158,47 +158,13 @@
             </div>
 
             <div class="bf-curator-field">
-              <label for="bf_curator_writer2_model"><small>Model</small></label>
-              <select id="bf_curator_writer2_model" class="text_pole bf-curator-full-width">
-                <option value="">-- Select Model --</option>
-                <optgroup label="Anthropic">
-                  <option value="anthropic/claude-opus-4-7">Claude Opus 4.7</option>
-                  <option value="anthropic/claude-opus-4-6">Claude Opus 4.6</option>
-                  <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                  <option value="anthropic/claude-opus-4">Claude Opus 4</option>
-                  <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
-                  <option value="anthropic/claude-haiku-4">Claude Haiku 4</option>
-                  <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                  <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
-                </optgroup>
-                <optgroup label="OpenAI">
-                  <option value="openai/gpt-4o">GPT-4o</option>
-                  <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                  <option value="openai/gpt-4.1">GPT-4.1</option>
-                  <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
-                  <option value="openai/o3">o3</option>
-                  <option value="openai/o4-mini">o4-mini</option>
-                </optgroup>
-                <optgroup label="Google">
-                  <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
-                  <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash</option>
-                  <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
-                </optgroup>
-                <optgroup label="Meta">
-                  <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
-                  <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
-                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
-                </optgroup>
-                <optgroup label="DeepSeek">
-                  <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
-                  <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
-                  <option value="deepseek/deepseek-r1">DeepSeek R1</option>
-                </optgroup>
-                <optgroup label="Other">
-                  <option value="mistralai/mistral-large-2411">Mistral Large</option>
-                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
-                </optgroup>
-              </select>
+              <label for="bf_curator_writer2_model"><small>Model <span class="bf-curator-helper-inline">(from ST's OpenRouter list)</span></small></label>
+              <div class="bf-curator-model-field">
+                <select id="bf_curator_writer2_model" class="text_pole">
+                  <option value="">-- Select Model --</option>
+                </select>
+                <button id="bf_curator_writer2_refreshModels" class="menu_button bf-curator-refresh-btn" title="Refresh model list from ST"><i class="fa-solid fa-sync"></i></button>
+              </div>
             </div>
 
             <div class="bf-curator-field">
@@ -265,47 +231,13 @@
             </div>
 
             <div class="bf-curator-field">
-              <label for="bf_curator_writer3_model"><small>Model</small></label>
-              <select id="bf_curator_writer3_model" class="text_pole bf-curator-full-width">
-                <option value="">-- Select Model --</option>
-                <optgroup label="Anthropic">
-                  <option value="anthropic/claude-opus-4-7">Claude Opus 4.7</option>
-                  <option value="anthropic/claude-opus-4-6">Claude Opus 4.6</option>
-                  <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                  <option value="anthropic/claude-opus-4">Claude Opus 4</option>
-                  <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
-                  <option value="anthropic/claude-haiku-4">Claude Haiku 4</option>
-                  <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                  <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
-                </optgroup>
-                <optgroup label="OpenAI">
-                  <option value="openai/gpt-4o">GPT-4o</option>
-                  <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                  <option value="openai/gpt-4.1">GPT-4.1</option>
-                  <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
-                  <option value="openai/o3">o3</option>
-                  <option value="openai/o4-mini">o4-mini</option>
-                </optgroup>
-                <optgroup label="Google">
-                  <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
-                  <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash</option>
-                  <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
-                </optgroup>
-                <optgroup label="Meta">
-                  <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
-                  <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
-                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
-                </optgroup>
-                <optgroup label="DeepSeek">
-                  <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
-                  <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
-                  <option value="deepseek/deepseek-r1">DeepSeek R1</option>
-                </optgroup>
-                <optgroup label="Other">
-                  <option value="mistralai/mistral-large-2411">Mistral Large</option>
-                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
-                </optgroup>
-              </select>
+              <label for="bf_curator_writer3_model"><small>Model <span class="bf-curator-helper-inline">(from ST's OpenRouter list)</span></small></label>
+              <div class="bf-curator-model-field">
+                <select id="bf_curator_writer3_model" class="text_pole">
+                  <option value="">-- Select Model --</option>
+                </select>
+                <button id="bf_curator_writer3_refreshModels" class="menu_button bf-curator-refresh-btn" title="Refresh model list from ST"><i class="fa-solid fa-sync"></i></button>
+              </div>
             </div>
 
             <div class="bf-curator-field">
@@ -372,47 +304,13 @@
             </div>
 
             <div class="bf-curator-field">
-              <label for="bf_curator_judge_model"><small>Model</small></label>
-              <select id="bf_curator_judge_model" class="text_pole bf-curator-full-width">
-                <option value="">-- Select Model --</option>
-                <optgroup label="Anthropic">
-                  <option value="anthropic/claude-opus-4-7">Claude Opus 4.7</option>
-                  <option value="anthropic/claude-opus-4-6">Claude Opus 4.6</option>
-                  <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6</option>
-                  <option value="anthropic/claude-opus-4">Claude Opus 4</option>
-                  <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
-                  <option value="anthropic/claude-haiku-4">Claude Haiku 4</option>
-                  <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                  <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</option>
-                </optgroup>
-                <optgroup label="OpenAI">
-                  <option value="openai/gpt-4o">GPT-4o</option>
-                  <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                  <option value="openai/gpt-4.1">GPT-4.1</option>
-                  <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
-                  <option value="openai/o3">o3</option>
-                  <option value="openai/o4-mini">o4-mini</option>
-                </optgroup>
-                <optgroup label="Google">
-                  <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
-                  <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash</option>
-                  <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
-                </optgroup>
-                <optgroup label="Meta">
-                  <option value="meta-llama/llama-4-maverick">Llama 4 Maverick</option>
-                  <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
-                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
-                </optgroup>
-                <optgroup label="DeepSeek">
-                  <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>
-                  <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
-                  <option value="deepseek/deepseek-r1">DeepSeek R1</option>
-                </optgroup>
-                <optgroup label="Other">
-                  <option value="mistralai/mistral-large-2411">Mistral Large</option>
-                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
-                </optgroup>
-              </select>
+              <label for="bf_curator_judge_model"><small>Model <span class="bf-curator-helper-inline">(from ST's OpenRouter list)</span></small></label>
+              <div class="bf-curator-model-field">
+                <select id="bf_curator_judge_model" class="text_pole">
+                  <option value="">-- Select Model --</option>
+                </select>
+                <button id="bf_curator_judge_refreshModels" class="menu_button bf-curator-refresh-btn" title="Refresh model list from ST"><i class="fa-solid fa-sync"></i></button>
+              </div>
             </div>
 
             <div class="bf-curator-field">
@@ -441,7 +339,13 @@
                 <i class="fa-solid fa-undo"></i> Reset
               </button>
             </h4>
-            <p class="bf-curator-helper">The anti-consensus filter instructions sent to the judge. Edit freely. Supports <code>{response_a}</code>, <code>{response_b}</code>, <code>{response_c}</code> placeholders.</p>
+            <div class="bf-curator-field">
+              <label for="bf_curator_judge_promptPreset"><small>Prompt Preset</small></label>
+              <select id="bf_curator_judge_promptPreset" class="text_pole bf-curator-full-width">
+                <!-- Populated dynamically from JUDGE_PRESETS -->
+              </select>
+            </div>
+            <p class="bf-curator-helper">Select a built-in prompt or choose "Custom" to write your own. Supports <code>{response_a}</code>, <code>{response_b}</code>, <code>{response_c}</code> placeholders.</p>
             <textarea id="bf_curator_judge_prompt" class="bf-curator-textarea bf-curator-judge-prompt"></textarea>
           </div>
         </div>
