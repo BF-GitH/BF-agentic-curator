@@ -4,7 +4,7 @@
 
 A SillyTavern extension that runs multiple AI writers in parallel, identifies what they all default to (the consensus — predictable, safe, generic), throws it away, and builds one response from what's left: the surprising, specific, alive parts that only one writer found.
 
-[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/bfgith)
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/bf_gith)
 
 ---
 
@@ -97,7 +97,7 @@ No API key entry needed if you're already connected to OpenRouter in SillyTavern
 
 Find this useful? Consider supporting development:
 
-[![Ko-fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/bfgith)
+[![Ko-fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko--fi-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/bf_gith)
 
 ## License
 
