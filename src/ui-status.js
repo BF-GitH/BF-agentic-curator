@@ -96,10 +96,15 @@ function _clearIndicatorTimeout() {
 // Reveal / Skip Button
 // ---------------------------------------------------------------------------
 
+let skipButtonRetries = 0;
 function _initSkipButton() {
     const menuList = document.querySelector('#chat_options .list-group');
     if (!menuList) {
-        setTimeout(_initSkipButton, 1000);
+        if (skipButtonRetries++ < 10) {
+            setTimeout(_initSkipButton, 2000);
+        } else {
+            console.warn('[BFCurator] Could not find chat options menu after 10 retries, skip button unavailable');
+        }
         return;
     }
 

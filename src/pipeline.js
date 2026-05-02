@@ -10,14 +10,14 @@
  * 6. Reveals the message
  */
 
-import { getSettings, setStatusIndicator, resolveApiKey as resolveApiKeyFromSettings } from './settings.js';
+import { getSettings, setStatusIndicator, resolveApiKey as resolveApiKeyFromSettings, getSystemPromptContent } from './settings.js';
 import { setArmedCheck, getCapturedPrompt, clearCapturedPrompt } from './interceptor.js';
 import { callLLM } from './api-adapters.js';
 import { buildJudgeMessages, getDefaultJudgePrompt } from './judge.js';
 import {
     showIndicator, hideIndicator, updateIndicator,
     showSkipButton, hideSkipButton, setSkipCallback,
-    addDebugLog, truncateWords,
+    addDebugLog,
 } from './ui-status.js';
 
 const LOG = '[BFCurator]';
@@ -45,6 +45,9 @@ let generationCleanupTimeout = null;
 
 // Track whether we are making our own LLM calls (judge fallback)
 let ownCallDepth = 0;
+
+// Track whether the current generation is a swipe
+let isSwipe = false;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -74,18 +77,33 @@ function resolveProvider(writerOrJudgeConfig, settings) {
 
 /**
  * Modify the captured messages array according to a writer's system prompt settings.
+ * Supports preset-based system prompt replacement, custom replacement, and suffix appending.
  */
-function modifyPromptForWriter(messages, writerConfig) {
+async function modifyPromptForWriter(messages, writerConfig) {
     const modified = structuredClone(messages);
     const systemMsg = modified.find(m => m.role === 'system');
     if (!systemMsg) return modified;
 
-    if (writerConfig.systemPromptMode === 'replace' && writerConfig.systemPrompt) {
+    // Handle preset-based system prompt replacement
+    const preset = writerConfig.systemPromptPreset;
+    if (preset && preset !== '__custom__') {
+        // Named preset - try to fetch content
+        const presetContent = await getSystemPromptContent(preset);
+        if (presetContent) {
+            systemMsg.content = presetContent;
+        }
+    } else if (preset === '__custom__' && writerConfig.systemPrompt) {
+        // Custom replacement
         systemMsg.content = writerConfig.systemPrompt;
-    } else if (writerConfig.systemPromptMode === 'append' && writerConfig.systemPromptSuffix) {
+    }
+    // else: preset is '' → keep original (same as Writer 1)
+
+    // Always append suffix if present
+    if (writerConfig.systemPromptSuffix) {
         const content = typeof systemMsg.content === 'string' ? systemMsg.content : '';
         systemMsg.content = content + '\n\n' + writerConfig.systemPromptSuffix;
     }
+
     return modified;
 }
 
@@ -189,7 +207,7 @@ function replaceMessage(messageIndex, newContent) {
 // ── Fire parallel writers ───────────────────────────────────────────────────
 
 /**
- * Log a summary of the captured prompt (first 100 words of system + last user message).
+ * Log a summary of the captured prompt with FULL text in expandable detail.
  */
 function logPromptSummary(messages, label) {
     if (!messages || messages.length === 0) return;
@@ -199,12 +217,12 @@ function logPromptSummary(messages, label) {
     const lastUserMsg = userMsgs[userMsgs.length - 1];
     const assistantCount = messages.filter(m => m.role === 'assistant').length;
 
-    const systemPreview = systemMsg ? truncateWords(typeof systemMsg.content === 'string' ? systemMsg.content : '', 100) : '(none)';
-    const userPreview = lastUserMsg ? truncateWords(typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '', 100) : '(none)';
+    const systemFull = systemMsg ? (typeof systemMsg.content === 'string' ? systemMsg.content : '') : '(none)';
+    const userFull = lastUserMsg ? (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '') : '(none)';
 
     const detail = `Total messages: ${messages.length} (${userMsgs.length} user, ${assistantCount} assistant, ${systemMsg ? 1 : 0} system)\n\n` +
-        `── System Prompt (first 100 words) ──\n${systemPreview}\n\n` +
-        `── Last User Message (first 100 words) ──\n${userPreview}`;
+        `── System Prompt (FULL) ──\n${systemFull}\n\n` +
+        `── Last User Message (FULL) ──\n${userFull}`;
 
     addDebugLog('info', `${label}: ${messages.length} messages`, detail);
 }
@@ -217,7 +235,7 @@ function logWriterConfig(label, config) {
     addDebugLog('info', `${label} config: ${config.provider}/${config.model} | temp=${config.temperature} | maxTokens=${config.maxTokens} | key=${keySource}`);
 }
 
-function fireParallelWriters() {
+async function fireParallelWriters() {
     const settings = getSettings();
     const capturedMessages = getCapturedPrompt();
 
@@ -234,21 +252,27 @@ function fireParallelWriters() {
     // Writer 2
     if (settings.writer2 && settings.writer2.enabled && settings.writer2.model) {
         try {
-            const messages = modifyPromptForWriter(capturedMessages, settings.writer2);
+            const messages = await modifyPromptForWriter(capturedMessages, settings.writer2);
             const config = buildLLMConfig(settings.writer2, settings);
             logWriterConfig('Writer 2', config);
 
             // Log if system prompt was modified
-            if (settings.writer2.systemPromptMode === 'replace' && settings.writer2.systemPrompt) {
-                addDebugLog('info', 'Writer 2: system prompt REPLACED', truncateWords(settings.writer2.systemPrompt, 100));
-            } else if (settings.writer2.systemPromptMode === 'append' && settings.writer2.systemPromptSuffix) {
-                addDebugLog('info', 'Writer 2: system prompt APPENDED', truncateWords(settings.writer2.systemPromptSuffix, 100));
+            const preset2 = settings.writer2.systemPromptPreset;
+            if (preset2 && preset2 !== '__custom__') {
+                addDebugLog('info', 'Writer 2: system prompt from preset', preset2);
+            } else if (preset2 === '__custom__' && settings.writer2.systemPrompt) {
+                addDebugLog('info', 'Writer 2: system prompt REPLACED (custom)', settings.writer2.systemPrompt);
+            }
+            if (settings.writer2.systemPromptSuffix) {
+                addDebugLog('info', 'Writer 2: system prompt suffix APPENDED', settings.writer2.systemPromptSuffix);
             }
 
             writer2Promise = callLLM(messages, config, signal);
+            writer2Promise.catch(() => {});
         } catch (err) {
             addDebugLog('fail', `Writer 2 setup error: ${err.message}`);
             writer2Promise = Promise.reject(err);
+            writer2Promise.catch(() => {});
         }
     } else {
         addDebugLog('info', `Writer 2: ${!settings.writer2?.enabled ? 'disabled' : 'no model selected'}`);
@@ -258,20 +282,26 @@ function fireParallelWriters() {
     // Writer 3
     if (settings.writer3 && settings.writer3.enabled && settings.writer3.model) {
         try {
-            const messages = modifyPromptForWriter(capturedMessages, settings.writer3);
+            const messages = await modifyPromptForWriter(capturedMessages, settings.writer3);
             const config = buildLLMConfig(settings.writer3, settings);
             logWriterConfig('Writer 3', config);
 
-            if (settings.writer3.systemPromptMode === 'replace' && settings.writer3.systemPrompt) {
-                addDebugLog('info', 'Writer 3: system prompt REPLACED', truncateWords(settings.writer3.systemPrompt, 100));
-            } else if (settings.writer3.systemPromptMode === 'append' && settings.writer3.systemPromptSuffix) {
-                addDebugLog('info', 'Writer 3: system prompt APPENDED', truncateWords(settings.writer3.systemPromptSuffix, 100));
+            const preset3 = settings.writer3.systemPromptPreset;
+            if (preset3 && preset3 !== '__custom__') {
+                addDebugLog('info', 'Writer 3: system prompt from preset', preset3);
+            } else if (preset3 === '__custom__' && settings.writer3.systemPrompt) {
+                addDebugLog('info', 'Writer 3: system prompt REPLACED (custom)', settings.writer3.systemPrompt);
+            }
+            if (settings.writer3.systemPromptSuffix) {
+                addDebugLog('info', 'Writer 3: system prompt suffix APPENDED', settings.writer3.systemPromptSuffix);
             }
 
             writer3Promise = callLLM(messages, config, signal);
+            writer3Promise.catch(() => {});
         } catch (err) {
             addDebugLog('fail', `Writer 3 setup error: ${err.message}`);
             writer3Promise = Promise.reject(err);
+            writer3Promise.catch(() => {});
         }
     } else {
         addDebugLog('info', `Writer 3: ${!settings.writer3?.enabled ? 'disabled' : 'no model selected'}`);
@@ -310,6 +340,7 @@ function resetPipeline() {
     pendingMessageIndex = null;
     writer2Promise = null;
     writer3Promise = null;
+    isSwipe = false;
     clearCapturedPrompt();
 
     addDebugLog('info', 'Pipeline reset');
@@ -401,11 +432,11 @@ async function runJudgePipeline(messageIndex) {
         const judgeKeySource = judgeConfig.apiKey ? 'custom key' : 'ST proxy';
         addDebugLog('info', `Judge config: ${judgeConfig.provider}/${judgeConfig.model} | temp=${judgeConfig.temperature} | maxTokens=${judgeConfig.maxTokens} | key=${judgeKeySource}`);
 
-        // Log judge prompt (first 100 words of system + user)
+        // Log judge prompt (FULL text in expandable detail)
         const judgeSysContent = judgeMessages.find(m => m.role === 'system')?.content || '';
         const judgeUserContent = judgeMessages.find(m => m.role === 'user')?.content || '';
         addDebugLog('info', `Judge prompt: system=${judgeSysContent.length} chars, user=${judgeUserContent.length} chars (${successfulWriters.length} responses)`,
-            `── Judge System Prompt (first 100 words) ──\n${truncateWords(judgeSysContent, 100)}\n\n── Judge User Prompt (first 100 words) ──\n${truncateWords(judgeUserContent, 100)}`);
+            `── Judge System Prompt (FULL) ──\n${judgeSysContent}\n\n── Judge User Prompt (FULL) ──\n${judgeUserContent}`);
 
         let judgeContent;
         try {
@@ -498,6 +529,7 @@ async function runJudgePipeline(messageIndex) {
             pendingMessageIndex = null;
             writer2Promise = null;
             writer3Promise = null;
+            isSwipe = false;
             abortController = null;
             clearCapturedPrompt();
             hideIndicator();
@@ -540,26 +572,40 @@ export function initPipeline() {
     });
 
     // ── GENERATION_STARTED ──────────────────────────────────────────
-    eventSource.on(eventTypes.GENERATION_STARTED, () => {
+    eventSource.on(eventTypes.GENERATION_STARTED, (type, options, dryRun) => {
         const settings = getSettings();
         if (!settings || !settings.enabled) return;
+
+        // Only arm for supported generation types
+        const supportedTypes = ['normal', 'regenerate', 'swipe', 'continue'];
+        if (type && !supportedTypes.includes(type)) return;
+
+        // Skip dry runs
+        if (dryRun) return;
 
         // Ignore if pipeline is already active (re-entrancy guard)
         if (pipelineActive) return;
 
-        // Log Writer 1 info (uses ST's native connection)
-        const stModel = getContext().onlineStatus ?? 'unknown';
-        addDebugLog('info', `GENERATION_STARTED — arming pipeline (Writer 1 via ST native connection)`);
+        addDebugLog('info', `GENERATION_STARTED (type=${type}) — arming pipeline`);
 
         pipelineActive = true;
         pendingMessageIndex = null;
         writer2Promise = null;
         writer3Promise = null;
+        isSwipe = (type === 'swipe');
         clearCapturedPrompt();
 
         abortController = new AbortController();
 
-        startPreHideObserver();
+        // For swipes, the message element already exists — hide it directly
+        if (isSwipe) {
+            const lastAiMsg = document.querySelector('#chat .mes:last-child');
+            if (lastAiMsg) lastAiMsg.style.display = 'none';
+            addDebugLog('info', 'Swipe detected — directly hid last AI message');
+        } else {
+            startPreHideObserver();
+        }
+
         showIndicator('Writer 1 generating...');
         showSkipButton();
         setStatusIndicator('running');

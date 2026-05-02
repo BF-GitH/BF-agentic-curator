@@ -78,6 +78,28 @@
 
           <hr class="bf-curator-divider" />
 
+          <!-- Connection Profile -->
+          <div class="bf-curator-section">
+            <h4>Connection Profile</h4>
+            <p class="bf-curator-helper">Optionally use a different ST connection profile for the curator's proxy calls.</p>
+            <label for="bf_curator_useProfile" class="checkbox_label">
+              <input id="bf_curator_useProfile" type="checkbox" />
+              <span>Use separate curator profile</span>
+            </label>
+            <div id="bf_curator_profile_section" style="display: none;">
+              <div class="bf-curator-inline-field" style="margin-top: 8px;">
+                <select id="bf_curator_curatorProfile" class="text_pole" style="flex: 1;">
+                  <option value="">-- Select Profile --</option>
+                </select>
+                <button id="bf_curator_refreshProfiles" class="menu_button" title="Refresh profiles" style="flex: 0 0 auto; margin-left: 4px;">
+                  <i class="fa-solid fa-refresh"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <hr class="bf-curator-divider" />
+
           <!-- Behavior -->
           <div class="bf-curator-section">
             <h4>Behavior</h4>
@@ -188,22 +210,28 @@
 
             <hr class="bf-curator-divider" />
 
-            <div class="bf-curator-inline-field">
-              <label for="bf_curator_writer2_systemPromptMode"><small>System Prompt:</small></label>
-              <select id="bf_curator_writer2_systemPromptMode" class="text_pole" style="flex: 1;">
-                <option value="append">Append to existing</option>
-                <option value="replace">Replace entirely</option>
-              </select>
+            <div class="bf-curator-field">
+              <label><small>System Prompt</small></label>
+              <div class="bf-curator-inline-field">
+                <select id="bf_curator_writer2_syspromptPreset" class="text_pole" style="flex: 1;">
+                  <option value="">-- Same as Writer 1 --</option>
+                  <option value="__custom__">Custom (edit below)</option>
+                </select>
+                <button id="bf_curator_writer2_refreshPresets" class="menu_button" title="Refresh presets" style="flex: 0 0 auto; margin-left: 4px;">
+                  <i class="fa-solid fa-refresh"></i>
+                </button>
+              </div>
+              <p class="bf-curator-helper">Select a saved system prompt, or use "Custom" to type your own.</p>
             </div>
 
-            <div id="bf_curator_writer2_suffixWrap">
-              <label for="bf_curator_writer2_systemPromptSuffix"><small>Suffix <span class="bf-curator-helper-inline">(appended to system prompt)</span></small></label>
-              <textarea id="bf_curator_writer2_systemPromptSuffix" class="bf-curator-textarea" rows="3" placeholder="Additional instructions appended..."></textarea>
+            <div id="bf_curator_writer2_customPromptWrap" style="display: none;">
+              <label for="bf_curator_writer2_systemPrompt"><small>Custom System Prompt</small></label>
+              <textarea id="bf_curator_writer2_systemPrompt" class="bf-curator-textarea" rows="4" placeholder="Full system prompt for this writer..."></textarea>
             </div>
 
-            <div id="bf_curator_writer2_replaceWrap" style="display: none;">
-              <label for="bf_curator_writer2_systemPrompt"><small>Full Replacement Prompt</small></label>
-              <textarea id="bf_curator_writer2_systemPrompt" class="bf-curator-textarea" rows="4" placeholder="Replaces system prompt entirely..."></textarea>
+            <div class="bf-curator-field">
+              <label for="bf_curator_writer2_systemPromptSuffix"><small>Suffix <span class="bf-curator-helper-inline">(always appended)</span></small></label>
+              <textarea id="bf_curator_writer2_systemPromptSuffix" class="bf-curator-textarea" rows="2" placeholder="Additional instructions appended to any prompt..."></textarea>
             </div>
           </div>
 
@@ -289,22 +317,28 @@
 
             <hr class="bf-curator-divider" />
 
-            <div class="bf-curator-inline-field">
-              <label for="bf_curator_writer3_systemPromptMode"><small>System Prompt:</small></label>
-              <select id="bf_curator_writer3_systemPromptMode" class="text_pole" style="flex: 1;">
-                <option value="append">Append to existing</option>
-                <option value="replace">Replace entirely</option>
-              </select>
+            <div class="bf-curator-field">
+              <label><small>System Prompt</small></label>
+              <div class="bf-curator-inline-field">
+                <select id="bf_curator_writer3_syspromptPreset" class="text_pole" style="flex: 1;">
+                  <option value="">-- Same as Writer 1 --</option>
+                  <option value="__custom__">Custom (edit below)</option>
+                </select>
+                <button id="bf_curator_writer3_refreshPresets" class="menu_button" title="Refresh presets" style="flex: 0 0 auto; margin-left: 4px;">
+                  <i class="fa-solid fa-refresh"></i>
+                </button>
+              </div>
+              <p class="bf-curator-helper">Select a saved system prompt, or use "Custom" to type your own.</p>
             </div>
 
-            <div id="bf_curator_writer3_suffixWrap">
-              <label for="bf_curator_writer3_systemPromptSuffix"><small>Suffix <span class="bf-curator-helper-inline">(appended to system prompt)</span></small></label>
-              <textarea id="bf_curator_writer3_systemPromptSuffix" class="bf-curator-textarea" rows="3" placeholder="Additional instructions appended..."></textarea>
+            <div id="bf_curator_writer3_customPromptWrap" style="display: none;">
+              <label for="bf_curator_writer3_systemPrompt"><small>Custom System Prompt</small></label>
+              <textarea id="bf_curator_writer3_systemPrompt" class="bf-curator-textarea" rows="4" placeholder="Full system prompt for this writer..."></textarea>
             </div>
 
-            <div id="bf_curator_writer3_replaceWrap" style="display: none;">
-              <label for="bf_curator_writer3_systemPrompt"><small>Full Replacement Prompt</small></label>
-              <textarea id="bf_curator_writer3_systemPrompt" class="bf-curator-textarea" rows="4" placeholder="Replaces system prompt entirely..."></textarea>
+            <div class="bf-curator-field">
+              <label for="bf_curator_writer3_systemPromptSuffix"><small>Suffix <span class="bf-curator-helper-inline">(always appended)</span></small></label>
+              <textarea id="bf_curator_writer3_systemPromptSuffix" class="bf-curator-textarea" rows="2" placeholder="Additional instructions appended to any prompt..."></textarea>
             </div>
           </div>
         </div>
